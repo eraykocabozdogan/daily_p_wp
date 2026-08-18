@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Plan Wallpaper</title>
+<meta name="theme-color" content="#0b0d10" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Plan Wallpaper" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#141820; --panel2:#1a202a; --line:#2a3240;
+    --text:#f4f7fb; --muted:#95a0af; --accent:#7da7ff; --danger:#ff7777;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{min-height:100vh}
+  button,input,select{font:inherit}
+  button{cursor:pointer}
+  .app{display:grid;grid-template-columns:360px minmax(0,1fr);min-height:100vh}
+  aside{border-right:1px solid var(--line);background:#10141a;padding:18px;overflow:auto}
+  main{padding:24px;min-width:0}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+  .section{border-top:1px solid var(--line);padding-top:16px;margin-top:16px}
+  .section:first-of-type{border-top:0;padding-top:0}
+  .section h2{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#c8d0dc;margin:0 0 10px}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 5px}
+  input[type="text"],input[type="time"],input[type="number"],select,textarea{
+    width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);
+    border-radius:9px;padding:9px 10px;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:#50698d}
+  textarea{resize:vertical;min-height:58px}
+  input[type="color"]{width:44px;height:36px;border:1px solid var(--line);padding:2px;border-radius:8px;background:var(--panel)}
+  input[type="file"]{width:100%;font-size:12px;color:var(--muted)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}
+  .inline{display:flex;align-items:center;gap:10px}
+  .grow{flex:1}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;padding:9px 12px}
+  .btn:hover{border-color:#536176}
+  .btn.primary{background:#e8eef9;color:#111722;border-color:#e8eef9;font-weight:650}
+  .btn.danger{color:#ffaaaa}
+  .btn.small{padding:6px 8px;font-size:12px}
+  .ring-card,.item-card{border:1px solid var(--line);border-radius:11px;padding:10px;margin-top:8px;background:#12171e}
+  .ring-head,.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .ring-head strong,.item-head strong{font-size:13px}
+  .ring-card[hidden]{display:none}
+  .items{display:grid;gap:7px;margin-top:10px}
+  .item-card{margin:0;padding:9px}
+  .item-grid{display:grid;grid-template-columns:34px 1fr auto;gap:8px;align-items:center}
+  .swatch{width:30px;height:30px;border-radius:8px;border:1px solid var(--line)}
+  .item-title{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item-time{font-size:11px;color:var(--muted);margin-top:2px}
+  .empty{font-size:12px;color:var(--muted);padding:8px 0}
+  .preview-wrap{height:calc(100vh - 48px);min-height:440px;display:flex;flex-direction:column;gap:12px}
+  .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .meta{font-size:12px;color:var(--muted)}
+  .stage{flex:1;min-height:0;border:1px solid var(--line);border-radius:15px;background:#080a0d;
+    display:flex;align-items:center;justify-content:center;padding:18px;overflow:hidden}
+  canvas{display:block;max-width:100%;max-height:100%;box-shadow:0 16px 60px #0008;background:#111;touch-action:none}
+  .note{font-size:11px;color:var(--muted);line-height:1.45}
+  .seg{display:flex;gap:8px}
+  .seg button{flex:1}
+  .active{border-color:#8ba8d1!important;background:#202c3b!important}
+
+  .brand-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .auth-status{font-size:11px;color:var(--muted);margin:-10px 0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .auth-overlay{
+    position:fixed;inset:0;z-index:1000;background:rgba(4,7,10,.78);
+    display:grid;place-items:center;padding:18px;backdrop-filter:blur(8px)
+  }
+  .auth-overlay[hidden]{display:none}
+  .auth-card{
+    width:min(390px,100%);background:#12171e;border:1px solid var(--line);
+    border-radius:18px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.42)
+  }
+  .auth-card h2{font-size:20px;margin:0 0 7px}
+  .auth-card p{font-size:13px;line-height:1.5;color:var(--muted);margin:0 0 18px}
+  .auth-actions{display:grid;gap:9px}
+  .auth-actions .btn{width:100%;padding:11px 13px}
+  .google-btn{background:#f6f7f8;color:#15191f;border-color:#f6f7f8;font-weight:650}
+  .auth-message{min-height:18px;margin-top:12px;font-size:12px;color:#b9c4d3}
+  .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#6f7b89;margin-right:6px;vertical-align:1px}
+  .sync-dot.ok{background:#7fb28e}
+  .sync-dot.busy{background:#d0aa67}
+  .sync-dot.err{background:#d47d7d}
+
+  @media (max-width:900px){
+    .app{grid-template-columns:1fr}
+    aside{border-right:0;border-bottom:1px solid var(--line)}
+    main{padding:14px}
+    .preview-wrap{height:70vh}
+  }
+</style>
+</head>
+<body>
+
+<div class="auth-overlay" id="authOverlay" hidden>
+  <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <h2 id="authTitle">Plan Wallpaper</h2>
+    <p>Google ile giriş yaparsan planların cihazların arasında eşitlenir. İstersen hesap açmadan yalnız bu cihazda kullanabilirsin.</p>
+    <div class="auth-actions">
+      <button class="btn google-btn" id="googleLogin" type="button">Google ile devam et</button>
+      <button class="btn" id="guestLogin" type="button">Hesap olmadan devam et</button>
+    </div>
+    <div class="auth-message" id="authMessage"></div>
+  </div>
+</div>
+
+<div class="app">
+  <aside>
+    <div class="brand-row">
+      <div>
+        <h1>Plan Wallpaper</h1>
+        <div class="sub">Günlük planını halka görünümünde PNG olarak üret.</div>
+      </div>
+      <button class="btn small" id="accountBtn" type="button">Giriş</button>
+    </div>
+    <div class="auth-status" id="authStatus"><span class="sync-dot"></span>Başlatılıyor…</div>
+
+    <section class="section">
+      <h2>Çıktı</h2>
+      <label for="device">Cihaz</label>
+      <select id="device">
+        <option value="mac">MacBook Air M1 — 2560×1600</option>
+        <option value="monitor">27" 2K Monitör — 2560×1440</option>
+        <option value="iphone">iPhone 11 — 828×1792</option>
+        <option value="watch">Huawei Watch GT 5 Pro — 466×466</option>
+        <option value="custom">Özel boyut</option>
+      </select>
+      <div id="customSize" hidden>
+        <div class="row">
+          <div><label for="customW">Genişlik</label><input id="customW" type="number" min="200" max="8192" value="1920"></div>
+          <div><label for="customH">Yükseklik</label><input id="customH" type="number" min="200" max="8192" value="1080"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Arka plan</h2>
+      <div class="inline">
+        <div><label for="bgColor">Renk</label><input id="bgColor" type="color" value="#10141c"></div>
+        <div class="grow">
+          <label for="bgImage">Görsel</label>
+          <input id="bgImage" type="file" accept="image/*">
+        </div>
+      </div>
+      <button class="btn small" id="clearBg" type="button" style="margin-top:8px">Görseli kaldır</button>
+      <div class="inline" style="margin-top:8px">
+        <div><label for="textColor">Yazı</label><input id="textColor" type="color" value="#f7f8fb"></div>
+        <div class="grow note">Görsel eklenmezse seçilen düz renk kullanılır.</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Halkalar</h2>
+      <label for="layoutMode">Görünüm</label>
+      <select id="layoutMode">
+        <option value="one">1 halka</option>
+        <option value="two" selected>2 halka</option>
+        <option value="spiral">Sarmal</option>
+      </select>
+<div id="spiralOptionsWrap" hidden style="margin-top:10px">
+        <label class="inline" for="showEmptySpiral" style="color:var(--text);margin:0">
+          <input id="showEmptySpiral" type="checkbox" checked>
+          <span>Boş sarmalı göster</span>
+        </label>
+      </div>
+
+      <div id="labelToggleWrap" hidden style="margin-top:10px">
+        <label class="inline" for="labelsEnabled" style="color:var(--text);margin:0">
+          <input id="labelsEnabled" type="checkbox">
+          <span>Etiket</span>
+        </label>
+        <div class="note" style="margin-top:5px">Etiketleri önizleme üzerinde sürükleyebilirsin.</div>
+      </div>
+
+      <div class="ring-card" id="ring1Card">
+        <div class="ring-head"><strong id="ring1Title">Halka 1</strong><span class="note" id="ring1Role">Dış</span></div>
+        <div class="row">
+          <div><label for="r1Start">Başlangıç</label><input id="r1Start" type="time" value="00:00"></div>
+          <div><label for="r1End">Bitiş</label><input id="r1End" type="time" value="12:00"></div>
+        </div>
+      </div>
+
+      <div class="ring-card" id="ring2Card">
+        <div class="ring-head"><strong id="ring2Title">Halka 2</strong><span class="note" id="ring2Role">İç</span></div>
+        <div class="row">
+          <div><label for="r2Start">Başlangıç</label><input id="r2Start" type="time" value="12:00"></div>
+          <div><label for="r2End">Bitiş</label><input id="r2End" type="time" value="00:00"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Plan öğeleri</h2>
+      <label for="itemName">İsim</label>
+      <input id="itemName" type="text" placeholder="Örn. Derin çalışma">
+
+      <label for="itemLabel">Etiket</label>
+      <textarea id="itemLabel" rows="2" placeholder="Öğe adıyla otomatik başlar"></textarea>
+      <div class="row3">
+        <div>
+          <label for="itemColor">Renk</label>
+          <input id="itemColor" type="color" value="#69a7ff">
+        </div>
+        <div><label for="itemStart">Başlangıç</label><input id="itemStart" type="time" value="09:00"></div>
+        <div><label for="itemEnd">Bitiş</label><input id="itemEnd" type="time" value="11:00"></div>
+      </div>
+      <button class="btn primary" id="addItem" type="button" style="width:100%;margin-top:10px">Öğe ekle</button>
+      <div class="items" id="items"></div>
+    </section>
+  </aside>
+
+  <main>
+    <div class="preview-wrap">
+      <div class="toolbar">
+        <div>
+          <strong style="font-size:14px">Önizleme</strong>
+          <span class="meta" id="canvasMeta"></span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="centerComposition" type="button">Ortala</button>
+          <button class="btn primary" id="download" type="button">PNG indir</button>
+        </div>
+      </div>
+      <div class="stage"><canvas id="canvas"></canvas></div>
+    </div>
+  </main>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0/dist/umd/supabase.min.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+  const canvas = $("canvas");
+  const ctx = canvas.getContext("2d");
+  const LEGACY_STORAGE_KEY = "plan-wallpaper-v1";
+  const GUEST_STORAGE_KEY = "plan-wallpaper-guest-v2";
+  const AUTH_CHOICE_KEY = "plan-wallpaper-auth-choice-v1";
+  const ACCOUNT_CACHE_PREFIX = "plan-wallpaper-account-v2:";
+  const SUPABASE_URL = "https://pbqwhxtmkmxzarvnsesu.supabase.co";
+  const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7yksSVZ_VJgG1yzbe3H-sg_IOg_u0lC";
+
+  const presets = {
+    mac: [2560,1600],
+    monitor: [2560,1440],
+    iphone: [828,1792],
+    watch: [466,466]
+  };
+
+  const defaultState = {
+    device:"mac", customW:1920, customH:1080,
+    bgColor:"#10141c", textColor:"#f7f8fb",
+    layoutMode:"two", showEmptySpiral:true, labelsEnabled:false, compositionOffset:{x:0,y:0}, labelOffsets:{}, labelLineAnchors:{}, labelTexts:{},
+    rings:[
+      {start:"00:00",end:"12:00"},
+      {start:"12:00",end:"00:00"}
+    ],
+    items:[]
+  };
+
+  let currentUser = null;
+  let authReady = false;
+  let cloudSyncTimer = null;
+  let cloudSyncBusy = false;
+  let pendingCloudSync = false;
+  let ignoreCloudSync = false;
+
+  function makeItemId(){
+    if(window.crypto && typeof window.crypto.randomUUID==="function") return window.crypto.randomUUID();
+    return `item-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
+  }
+
+  function normalizeItems(items){
+    return (Array.isArray(items)?items:[]).map(it=>({
+      ...it,
+      id:it.id || makeItemId()
+    }));
+  }
+
+  function normalizeState(saved){
+    saved = saved && typeof saved==="object" ? saved : {};
+    const migratedMode = saved.layoutMode ||
+      (saved.viewMode==="spiral" ? "spiral" : (Number(saved.ringCount)===1 ? "one" : "two"));
+    return {
+      ...structuredClone(defaultState),
+      ...saved,
+      layoutMode:migratedMode,
+      showEmptySpiral:saved.showEmptySpiral!==false,
+      labelsEnabled:Boolean(saved.labelsEnabled),
+      compositionOffset:saved.compositionOffset && typeof saved.compositionOffset==="object"
+        ? {x:Number(saved.compositionOffset.x)||0,y:Number(saved.compositionOffset.y)||0}
+        : {x:0,y:0},
+      labelOffsets:saved.labelOffsets && typeof saved.labelOffsets==="object" ? saved.labelOffsets : {},
+      labelLineAnchors:saved.labelLineAnchors && typeof saved.labelLineAnchors==="object" ? saved.labelLineAnchors : {},
+      labelTexts:saved.labelTexts && typeof saved.labelTexts==="object" ? saved.labelTexts : {},
+      rings: saved.rings?.length === 2 ? saved.rings : structuredClone(defaultState.rings),
+      items: normalizeItems(saved.items)
+    };
+  }
+
+  function readJsonStorage(key){
+    try{
+      const raw=localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+
+  function normalizeAppData(raw){
+    if(raw && typeof raw==="object" && raw.appState){
+      return {
+        version:Number(raw.version)||2,
+        appState:normalizeState(raw.appState),
+        bgImageDataUrl:typeof raw.bgImageDataUrl==="string" ? raw.bgImageDataUrl : ""
+      };
+    }
+    return {
+      version:2,
+      appState:normalizeState(raw),
+      bgImageDataUrl:""
+    };
+  }
+
+  function loadInitialGuestData(){
+    const current=readJsonStorage(GUEST_STORAGE_KEY);
+    if(current) return normalizeAppData(current);
+    const legacy=readJsonStorage(LEGACY_STORAGE_KEY);
+    return normalizeAppData(legacy || structuredClone(defaultState));
+  }
+
+  const initialData=loadInitialGuestData();
+  let state=initialData.appState;
+  let bgImage=null;
+  let bgImageDataUrl=initialData.bgImageDataUrl;
+  let labelHitboxes=[];
+  let labelDrag=null;
+
+  function currentAppData(){
+    return {
+      version:2,
+      appState:state,
+      bgImageDataUrl:bgImageDataUrl || ""
+    };
+  }
+
+  function accountCacheKey(userId){
+    return ACCOUNT_CACHE_PREFIX + userId;
+  }
+
+  function saveLocalData(){
+    const key=currentUser ? accountCacheKey(currentUser.id) : GUEST_STORAGE_KEY;
+    try{
+      localStorage.setItem(key,JSON.stringify(currentAppData()));
+      if(!currentUser) localStorage.removeItem(LEGACY_STORAGE_KEY);
+      return true;
+    }catch(e){
+      setAuthStatus(currentUser ? "Yerel önbellek dolu; bulut senkronu sürecek." : "Yerel kayıt alanı dolu.", "err");
+      return false;
+    }
+  }
+
+  function saveState(){
+    saveLocalData();
+    if(currentUser && authReady && !ignoreCloudSync) queueCloudSync();
+  }
+
+  function setAuthStatus(text,kind=""){
+    const el=$("authStatus");
+    if(!el) return;
+    const dotClass=kind ? ` ${kind}` : "";
+    el.innerHTML=`<span class="sync-dot${dotClass}"></span>${escapeHtml(text)}`;
+  }
+
+  function updateAuthUI(){
+    if(!$("accountBtn")) return;
+    if(currentUser){
+      const label=currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || currentUser.email || "Hesap";
+      $("accountBtn").textContent="Çıkış";
+      $("accountBtn").title=label;
+    }else{
+      $("accountBtn").textContent="Giriş";
+      $("accountBtn").title="";
+    }
+  }
+
+  function loadBackgroundImage(){
+    bgImage=null;
+    if(!bgImageDataUrl){ draw(); return; }
+    const img=new Image();
+    img.onload=()=>{ bgImage=img; draw(); };
+    img.onerror=()=>{ bgImage=null; draw(); };
+    img.src=bgImageDataUrl;
+  }
+
+  function applyAppData(raw,{persist=false}={}){
+    const data=normalizeAppData(raw);
+    ignoreCloudSync=true;
+    state=data.appState;
+    bgImageDataUrl=data.bgImageDataUrl;
+    if(persist) saveLocalData();
+    syncUI();
+    loadBackgroundImage();
+    ignoreCloudSync=false;
+  }
+
+  const supa = window.supabase?.createClient
+    ? window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+      })
+    : null;
+
+  function queueCloudSync(){
+    pendingCloudSync=true;
+    clearTimeout(cloudSyncTimer);
+    cloudSyncTimer=setTimeout(flushCloudSync,700);
+    setAuthStatus("Değişiklikler eşitleniyor…","busy");
+  }
+
+  async function flushCloudSync(){
+    if(!currentUser || !authReady || !supa || cloudSyncBusy || !pendingCloudSync) return;
+    cloudSyncBusy=true;
+    pendingCloudSync=false;
+    clearTimeout(cloudSyncTimer);
+    try{
+      const payload=currentAppData();
+      const {error}=await supa.from("user_app_state").upsert({
+        user_id:currentUser.id,
+        state:payload,
+        updated_at:new Date().toISOString()
+      },{onConflict:"user_id"});
+      if(error) throw error;
+      try{ localStorage.setItem(accountCacheKey(currentUser.id),JSON.stringify(payload)); }catch(e){}
+      setAuthStatus("Google hesabıyla eşitlendi","ok");
+    }catch(err){
+      pendingCloudSync=true;
+      console.error("Cloud sync failed:",err);
+      setAuthStatus("Senkron bekliyor; bağlantı gelince tekrar denenecek.","err");
+    }finally{
+      cloudSyncBusy=false;
+    }
+  }
+
+  async function activateUser(user){
+    if(!user || !supa) return;
+    authReady=false;
+    currentUser=user;
+    updateAuthUI();
+    localStorage.setItem(AUTH_CHOICE_KEY,"account");
+    setAuthStatus("Bulut verisi yükleniyor…","busy");
+
+    const accountCache=readJsonStorage(accountCacheKey(user.id));
+    try{
+      const {data,error}=await supa
+        .from("user_app_state")
+        .select("state,updated_at")
+        .eq("user_id",user.id)
+        .maybeSingle();
+      if(error) throw error;
+
+      if(data?.state){
+        applyAppData(data.state,{persist:true});
+      }else{
+        if(accountCache) applyAppData(accountCache,{persist:true});
+        const payload=currentAppData();
+        const {error:insertError}=await supa.from("user_app_state").upsert({
+          user_id:user.id,
+          state:payload,
+          updated_at:new Date().toISOString()
+        },{onConflict:"user_id"});
+        if(insertError) throw insertError;
+        try{ localStorage.setItem(accountCacheKey(user.id),JSON.stringify(payload)); }catch(e){}
+      }
+      authReady=true;
+      pendingCloudSync=false;
+      $("authOverlay").hidden=true;
+      setAuthStatus("Google hesabıyla eşitlendi","ok");
+    }catch(err){
+      console.error("Cloud load failed:",err);
+      if(accountCache) applyAppData(accountCache,{persist:false});
+      authReady=false;
+      $("authOverlay").hidden=true;
+      setAuthStatus("Buluta bağlanılamadı; yerel önbellek kullanılıyor.","err");
+    }
+  }
+
+  function activateGuest(){
+    authReady=false;
+    currentUser=null;
+    updateAuthUI();
+    localStorage.setItem(AUTH_CHOICE_KEY,"guest");
+    const guest=readJsonStorage(GUEST_STORAGE_KEY);
+    if(guest) applyAppData(guest,{persist:false});
+    $("authOverlay").hidden=true;
+    setAuthStatus("Misafir • yalnız bu cihazda","ok");
+  }
+
+  async function initializeAuth(){
+    updateAuthUI();
+    if(!supa){
+      setAuthStatus("Supabase istemcisi yüklenemedi.","err");
+      if(localStorage.getItem(AUTH_CHOICE_KEY)==="guest") activateGuest();
+      else $("authOverlay").hidden=false;
+      return;
+    }
+    try{
+      const {data:{session},error}=await supa.auth.getSession();
+      if(error) throw error;
+      if(session?.user){
+        await activateUser(session.user);
+      }else if(localStorage.getItem(AUTH_CHOICE_KEY)==="guest"){
+        activateGuest();
+      }else{
+        setAuthStatus("Giriş seçimi bekleniyor");
+        $("authOverlay").hidden=false;
+      }
+    }catch(err){
+      console.error("Auth init failed:",err);
+      setAuthStatus("Oturum kontrolü yapılamadı.","err");
+      if(localStorage.getItem(AUTH_CHOICE_KEY)==="guest") activateGuest();
+      else $("authOverlay").hidden=false;
+    }
+
+    supa.auth.onAuthStateChange((event,session)=>{
+      if(event==="SIGNED_IN" && session?.user && session.user.id!==currentUser?.id){
+        setTimeout(()=>activateUser(session.user),0);
+      }else if(event==="SIGNED_OUT"){
+        setTimeout(()=>activateGuest(),0);
+      }
+    });
+  }
+
+  function mins(t){
+    const [h,m] = String(t || "00:00").split(":").map(Number);
+    return ((h||0)*60 + (m||0)) % 1440;
+  }
+
+  function clock(minute, format){
+    const m = ((Math.round(minute)%1440)+1440)%1440;
+    const h = Math.floor(m/60), mm = m%60;
+    if(format === "12"){
+      const hh = h%12 || 12;
+      return mm ? `${hh}:${String(mm).padStart(2,"0")}` : String(hh);
+    }
+    return mm ? `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}` : String(h).padStart(2,"0");
+  }
+
+  function duration(start,end,fullIfEqual=true){
+    const s=mins(start), e=mins(end);
+    const d=(e-s+1440)%1440;
+    return d===0 && fullIfEqual ? 1440 : d;
+  }
+
+  function itemDuration(item){ return duration(item.start,item.end,false); }
+
+  function windowDuration(ring,allowLong=false){
+    const d=duration(ring.start,ring.end,true);
+    return allowLong ? d : Math.min(d,720);
+  }
+
+  function overlapsForRing(item,ring,allowLong=false){
+    const rd=windowDuration(ring,allowLong);
+    const id=itemDuration(item);
+    if(id<=0) return [];
+    const rs=mins(ring.start);
+    const itemA=mins(item.start), itemB=itemA+id;
+    const out=[];
+    for(let k=-1;k<=1;k++){
+      const ringA=rs+k*1440;
+      const ringB=ringA+rd;
+      const a=Math.max(itemA,ringA);
+      const b=Math.min(itemB,ringB);
+      if(b>a+0.001) out.push({a,b,ringA,rd});
+    }
+    return out;
+  }
+
+  function ringVisible(item,ring,allowLong=false){
+    return overlapsForRing(item,ring,allowLong).length>0;
+  }
+
+  function activeRings(){
+    return state.layoutMode==="two" ? state.rings.slice(0,2) : state.rings.slice(0,1);
+  }
+
+  function visibleItems(){
+    const allowLong=state.layoutMode==="spiral";
+    const rings=activeRings();
+    return state.items.filter(it=>rings.some(r=>ringVisible(it,r,allowLong)));
+  }
+
+  function getSize(){
+    if(state.device === "custom"){
+      return [
+        Math.max(200, Math.min(8192, Number(state.customW)||1920)),
+        Math.max(200, Math.min(8192, Number(state.customH)||1080))
+      ];
+    }
+    return presets[state.device] || presets.mac;
+  }
+
+  function fitCover(img,w,h){
+    const s=Math.max(w/img.width,h/img.height);
+    const dw=img.width*s, dh=img.height*s;
+    return [(w-dw)/2,(h-dh)/2,dw,dh];
+  }
+
+  function rgba(hex,a){
+    const n=parseInt(hex.replace("#",""),16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+  }
+
+  function draw(){
+    labelHitboxes=[];
+    const [w,h]=getSize();
+    if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; }
+    $("canvasMeta").textContent=` · ${w}×${h}`;
+
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle=state.bgColor;
+    ctx.fillRect(0,0,w,h);
+    if(bgImage){
+      const [x,y,dw,dh]=fitCover(bgImage,w,h);
+      ctx.drawImage(bgImage,x,y,dw,dh);
+    }
+
+    const minDim=Math.min(w,h);
+    const pad=Math.max(20,minDim*0.06);
+    const offsetX=(Number(state.compositionOffset?.x)||0)*w;
+    const offsetY=(Number(state.compositionOffset?.y)||0)*h;
+    const ringArea={x:offsetX,y:offsetY,w,h};
+
+    if(state.layoutMode==="spiral") drawSpiralMode(ringArea,pad);
+    else drawRings(ringArea,pad);
+  }
+
+  function getRingLayout(area,globalPad){
+    const cx=area.x+area.w/2;
+    const cy=area.y+area.h/2;
+    const minA=Math.min(area.w,area.h);
+    const pad=Math.max(globalPad,minA*0.08);
+    const maxR=Math.max(20,minA/2-pad);
+
+    const two=state.layoutMode==="two";
+    const outerIndex=0;
+    const innerIndex=two ? 1 : -1;
+    const baseStroke=Math.max(8,minA*(two?0.050:0.064));
+    const gap=Math.max(16,minA*0.055);
+
+    const radii=[];
+    if(two){
+      radii[outerIndex]=maxR-baseStroke/2;
+      radii[innerIndex]=Math.max(baseStroke*1.8,maxR-baseStroke-gap-baseStroke);
+    }else{
+      radii[0]=maxR-baseStroke/2;
+    }
+    return {cx,cy,minA,maxR,two,outerIndex,innerIndex,baseStroke,gap,radii};
+  }
+
+  function clockAngle(absMinute){
+    const m=((absMinute%720)+720)%720;
+    return -Math.PI/2 + (m/720)*Math.PI*2;
+  }
+
+  function drawArcByTime(cx,cy,radius,startAbs,durationMins){
+    const a1=clockAngle(startAbs);
+    const a2=a1+(durationMins/720)*Math.PI*2;
+    ctx.arc(cx,cy,radius,a1,a2,false);
+  }
+
+  function drawRings(area,globalPad){
+    const layout=getRingLayout(area,globalPad);
+    const {two,innerIndex,radii,baseStroke,cx,cy,minA}=layout;
+    const count=two ? 2 : 1;
+
+    for(let i=0;i<count;i++){
+      const isInner=two && i===innerIndex;
+      drawOneRing(state.rings[i],radii[i],baseStroke,cx,cy,minA,isInner);
+    }
+  }
+
+  function drawOneRing(ring,radius,stroke,cx,cy,minA,isInner=false){
+    const rs=mins(ring.start);
+    const rd=windowDuration(ring,false);
+
+    ctx.save();
+    ctx.lineWidth=stroke;
+    ctx.lineCap="butt";
+    ctx.strokeStyle=rgba(state.textColor,0.13);
+    ctx.beginPath();
+    drawArcByTime(cx,cy,radius,rs,rd);
+    ctx.stroke();
+
+    for(const item of state.items){
+      const overlaps=overlapsForRing(item,ring,false);
+      if(!overlaps.length) continue;
+      ctx.strokeStyle=item.color;
+      ctx.lineWidth=stroke;
+      for(const ov of overlaps){
+        ctx.beginPath();
+        drawArcByTime(cx,cy,radius,ov.a,ov.b-ov.a);
+        ctx.stroke();
+      }
+    }
+
+    drawTicks(ring,radius,stroke,cx,cy,minA,rd,isInner);
+    ctx.restore();
+  }
+
+  function tickMoments(ring,rd,step){
+    const rs=mins(ring.start);
+    const first=Math.ceil(rs/step)*step;
+    const end=rs+rd;
+    const out=[];
+
+    for(let t=first;t<=end+0.001;t+=step){
+      // 12 saatlik yüzeyde başlangıç ve bitiş aynı fiziksel noktaya düşer.
+      // Başlangıç etiketi zaten varsa, bitişteki kopyayı çizme.
+      const duplicatesStart =
+        rd>=720-0.001 &&
+        Math.abs(t-end)<0.001 &&
+        out.length>0 &&
+        Math.abs((((t-out[0])%720)+720)%720)<0.001;
+
+      if(!duplicatesStart) out.push(t);
+    }
+    return out;
+  }
+
+  function drawTicks(ring,radius,stroke,cx,cy,minA,rd,isInner=false){
+    const step=180;
+    const moments=tickMoments(ring,rd,step);
+    const clearGap=Math.max(5,stroke*0.22);
+    const tickLen=Math.max(6,stroke*0.34);
+    const labelGap=Math.max(8,stroke*0.42);
+    const fontSize=Math.max(8,Math.min(24,minA*0.017));
+    const bandEdge=isInner ? radius-stroke/2 : radius+stroke/2;
+
+    ctx.lineWidth=Math.max(1,minA*0.0013);
+    ctx.strokeStyle=rgba(state.textColor,0.52);
+    ctx.fillStyle=rgba(state.textColor,0.78);
+    ctx.font=`500 ${fontSize}px Inter,system-ui,sans-serif`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    moments.forEach((t,idx)=>{
+      const a=clockAngle(t);
+      let r1,r2,lr;
+      if(isInner){
+        r1=bandEdge-clearGap; r2=r1-tickLen; lr=r2-labelGap-fontSize*0.35;
+      }else{
+        r1=bandEdge+clearGap; r2=r1+tickLen; lr=r2+labelGap+fontSize*0.35;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
+      ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
+      ctx.stroke();
+
+      if(lr>fontSize){
+        ctx.fillText(clock(t,"24"),cx+Math.cos(a)*lr,cy+Math.sin(a)*lr);
+      }
+    });
+  }
+
+  function drawSpiralMode(area,globalPad){
+    const cx=area.x+area.w/2;
+    const cy=area.y+area.h/2;
+    const minA=Math.min(area.w,area.h);
+    const pad=Math.max(globalPad,minA*0.08);
+    const stroke=Math.max(8,minA*0.055);
+    const outerR=Math.max(stroke*2.5,minA/2-pad-stroke/2);
+    const coilGap=Math.max(stroke*0.75,minA*0.035);
+    const pitch=stroke+coilGap;
+    const ring=state.rings[0];
+    const rs=mins(ring.start);
+    const rd=windowDuration(ring,true);
+    const spiralItemVisualOffset=-5; // Yalnızca renkli öğelerin görsel konumu; zaman mantığını değiştirmez.
+    const totalTurns=Math.max(0,rd/720);
+    const radialTravel=Math.max(0,totalTurns*pitch);
+    const innerR=Math.max(stroke*1.7,outerR-radialTravel);
+    function pointForElapsed(elapsed){
+      const abs=rs+elapsed;
+      const turn=elapsed/720;
+      const r=innerR+turn*pitch;
+      const a=clockAngle(abs);
+      return {x:cx+Math.cos(a)*r,y:cy+Math.sin(a)*r,a,r,turn};
+    }
+
+    function strokeSegment(e1,e2){
+      const span=Math.max(0.001,e2-e1);
+      const steps=Math.max(16,Math.ceil(span/4));
+      for(let j=0;j<=steps;j++){
+        const e=e1+span*(j/steps);
+        const p=pointForElapsed(e);
+        if(j===0) ctx.moveTo(p.x,p.y);
+        else ctx.lineTo(p.x,p.y);
+      }
+    }
+
+    // Sarmalı kalın bir "şerit" olarak çiziyoruz.
+    // Başlangıç kenarı konkav, bitiş kenarı konveks; ayrı daire eklenmiyor.
+    function ribbonPoints(e1,e2){
+      const span=Math.max(0.001,e2-e1);
+      const steps=Math.max(24,Math.ceil(span/3));
+      const pts=[];
+      for(let j=0;j<=steps;j++){
+        const e=e1+span*(j/steps);
+        const p=pointForElapsed(e);
+        pts.push({...p,e});
+      }
+      return pts;
+    }
+
+    function tangentAt(elapsed){
+      const eps=Math.max(0.25,Math.min(2,rd*0.002));
+      const a=Math.max(0,elapsed-eps);
+      const b=Math.min(rd,elapsed+eps);
+      const p1=pointForElapsed(a);
+      const p2=pointForElapsed(b);
+      let tx=p2.x-p1.x, ty=p2.y-p1.y;
+      const len=Math.hypot(tx,ty)||1;
+      tx/=len; ty/=len;
+      return {tx,ty,nx:-ty,ny:tx};
+    }
+
+    function drawShapedSegment(e1,e2,color){
+      const pts=ribbonPoints(e1,e2);
+      if(pts.length<2) return;
+      const half=stroke/2;
+      const left=[], right=[];
+
+      for(let i=0;i<pts.length;i++){
+        const prev=pts[Math.max(0,i-1)];
+        const next=pts[Math.min(pts.length-1,i+1)];
+        let tx=next.x-prev.x, ty=next.y-prev.y;
+        const len=Math.hypot(tx,ty)||1;
+        tx/=len; ty/=len;
+        const nx=-ty, ny=tx;
+        left.push({x:pts[i].x+nx*half,y:pts[i].y+ny*half});
+        right.push({x:pts[i].x-nx*half,y:pts[i].y-ny*half});
+      }
+
+      const endP=pointForElapsed(e2);
+      const endT=tangentAt(e2);
+      const startP=pointForElapsed(e1);
+      const startT=tangentAt(e1);
+      const capSteps=18;
+
+      ctx.beginPath();
+      ctx.moveTo(left[0].x,left[0].y);
+      for(let i=1;i<left.length;i++) ctx.lineTo(left[i].x,left[i].y);
+
+      // Dış/bitiş ucu: doğal round-cap yönünde, sarmalın devamına doğru.
+      for(let i=1;i<=capSteps;i++){
+        const th=Math.PI*(i/capSteps);
+        const x=endP.x + half*(endT.nx*Math.cos(th) + endT.tx*Math.sin(th));
+        const y=endP.y + half*(endT.ny*Math.cos(th) + endT.ty*Math.sin(th));
+        ctx.lineTo(x,y);
+      }
+
+      for(let i=right.length-2;i>=0;i--) ctx.lineTo(right[i].x,right[i].y);
+
+      // İç/başlangıç ucu: aynı geometrinin tersi; şeridin içine doğru konkav.
+      for(let i=1;i<=capSteps;i++){
+        const th=Math.PI*(i/capSteps);
+        const x=startP.x + half*(-startT.nx*Math.cos(th) + startT.tx*Math.sin(th));
+        const y=startP.y + half*(-startT.ny*Math.cos(th) + startT.ty*Math.sin(th));
+        ctx.lineTo(x,y);
+      }
+
+      ctx.closePath();
+      ctx.fillStyle=color;
+      ctx.fill();
+    }
+
+    ctx.save();
+    if(state.showEmptySpiral){
+      drawShapedSegment(0,rd,rgba(state.textColor,0.13));
+    }
+
+    for(const item of state.items){
+      const overlaps=overlapsForRing(item,ring,true);
+      if(!overlaps.length) continue;
+      for(const ov of overlaps){
+        let e1=ov.a-ov.ringA;
+        let e2=ov.b-ov.ringA;
+        e1=Math.max(0,Math.min(rd,e1));
+        e2=Math.max(0,Math.min(rd,e2));
+        if(e2<=e1) continue;
+
+        // Renkli segmenti yalnızca görsel olarak 5 dk erken çiz.
+        // Kesişim, süre ve gerçek saat değerleri değişmez.
+        const visualE1=Math.max(0,Math.min(rd,e1+spiralItemVisualOffset));
+        const visualE2=Math.max(0,Math.min(rd,e2+spiralItemVisualOffset));
+        if(visualE2<=visualE1) continue;
+        drawShapedSegment(visualE1,visualE2,item.color);
+      }
+    }
+
+    function drawSpiralLabels(){
+      if(!state.labelsEnabled) return;
+
+      const outerWindowStart=Math.max(0,rd-720);
+      const landscape=canvas.width>=canvas.height;
+      const fontSize=Math.max(12,Math.min(34,minA*0.020));
+      const edgePad=Math.max(24,minA*0.050);
+      const labelSpecs=[];
+
+      function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+      function labelKey(name){ return `name:${name}`; }
+
+      function elapsedSegments(item){
+        const segs=[];
+        for(const ov of overlapsForRing(item,ring,true)){
+          const e1=Math.max(0,Math.min(rd,ov.a-ov.ringA));
+          const e2=Math.max(0,Math.min(rd,ov.b-ov.ringA));
+          if(e2>e1+0.001) segs.push({e1,e2,item,color:item.color});
+        }
+        return segs;
+      }
+
+      function clippedParts(segs,a,b){
+        const out=[];
+        for(const s of segs){
+          const x=Math.max(s.e1,a), y=Math.min(s.e2,b);
+          if(y>x+0.001) out.push({...s,e1:x,e2:y});
+        }
+        return out;
+      }
+
+      function longest(parts){
+        return parts.reduce((best,p)=>(!best || p.e2-p.e1>best.e2-best.e1)?p:best,null);
+      }
+
+      function nearestPointOnBox(box,anchor){
+        let x=clamp(anchor.x,box.x,box.x+box.w);
+        let y=clamp(anchor.y,box.y,box.y+box.h);
+
+        if(anchor.x<box.x) x=box.x;
+        else if(anchor.x>box.x+box.w) x=box.x+box.w;
+        else if(anchor.y<box.y) y=box.y;
+        else if(anchor.y>box.y+box.h) y=box.y+box.h;
+        else{
+          const dL=Math.abs(anchor.x-box.x);
+          const dR=Math.abs(box.x+box.w-anchor.x);
+          const dT=Math.abs(anchor.y-box.y);
+          const dB=Math.abs(box.y+box.h-anchor.y);
+          const m=Math.min(dL,dR,dT,dB);
+          if(m===dL) x=box.x;
+          else if(m===dR) x=box.x+box.w;
+          else if(m===dT) y=box.y;
+          else y=box.y+box.h;
+        }
+        return {x,y};
+      }
+
+      function pointFromNormalized(box,n){
+        return {
+          x:box.x+clamp(Number(n.u)||0,0,1)*box.w,
+          y:box.y+clamp(Number(n.v)||0,0,1)*box.h
+        };
+      }
+
+      function autoLinePoints(box,anchors){
+        const results=anchors.map((anchor,index)=>({
+          index,
+          anchor,
+          point:nearestPointOnBox(box,anchor)
+        }));
+
+        // Aynı kenara düşen bağlantıları o kenar boyunca dağıt.
+        const edgeOf=p=>{
+          const eps=0.5;
+          if(Math.abs(p.x-box.x)<=eps) return "left";
+          if(Math.abs(p.x-(box.x+box.w))<=eps) return "right";
+          if(Math.abs(p.y-box.y)<=eps) return "top";
+          return "bottom";
+        };
+
+        const groups={left:[],right:[],top:[],bottom:[]};
+        for(const r of results) groups[edgeOf(r.point)].push(r);
+
+        for(const [edge,group] of Object.entries(groups)){
+          if(group.length<=1) continue;
+          if(edge==="left" || edge==="right"){
+            group.sort((a,b)=>a.anchor.y-b.anchor.y);
+            group.forEach((r,i)=>{
+              r.point.y=box.y+box.h*((i+1)/(group.length+1));
+              r.point.x=edge==="left" ? box.x : box.x+box.w;
+            });
+          }else{
+            group.sort((a,b)=>a.anchor.x-b.anchor.x);
+            group.forEach((r,i)=>{
+              r.point.x=box.x+box.w*((i+1)/(group.length+1));
+              r.point.y=edge==="top" ? box.y : box.y+box.h;
+            });
+          }
+        }
+
+        return results.sort((a,b)=>a.index-b.index).map(r=>r.point);
+      }
+
+      // Tam aynı isimli öğeleri tek etiket grubunda birleştir.
+      const groups=new Map();
+      for(const item of state.items){
+        const name=item.name || "İsimsiz";
+        if(!groups.has(name)) groups.set(name,{name,key:labelKey(name),items:[],segments:[]});
+        const g=groups.get(name);
+        g.items.push(item);
+        g.segments.push(...elapsedSegments(item));
+      }
+
+      for(const group of groups.values()){
+        const segs=group.segments;
+        if(!segs.length) continue;
+
+        const outerParts=clippedParts(segs,outerWindowStart,rd);
+        const outerMinutes=outerParts.reduce((sum,p)=>sum+(p.e2-p.e1),0);
+        const outside=outerMinutes>=60;
+
+        let candidates;
+        if(outside){
+          candidates=outerParts;
+        }else if(outerWindowStart>0){
+          candidates=clippedParts(segs,0,outerWindowStart);
+          if(!candidates.length) candidates=segs;
+        }else{
+          candidates=segs;
+        }
+
+        const chosen=longest(candidates);
+        if(!chosen) continue;
+        const logicalElapsed=(chosen.e1+chosen.e2)/2;
+        const visualElapsed=clamp(logicalElapsed+spiralItemVisualOffset,0,rd);
+        const anchor=pointForElapsed(visualElapsed);
+
+        // Tek etiket, ama aynı isimli her ayrı dilimden etikete ayrı çizgi.
+        const anchors=segs.map(seg=>{
+          const segmentMid=(seg.e1+seg.e2)/2;
+          const segmentVisual=clamp(segmentMid+spiralItemVisualOffset,0,rd);
+          return {
+            ...pointForElapsed(segmentVisual),
+            color:seg.color || group.items[0]?.color || state.textColor
+          };
+        });
+
+        const labelText=(state.labelTexts[group.name] ?? group.name) || group.name;
+
+        labelSpecs.push({
+          key:group.key,
+          name:group.name,
+          labelText,
+          itemIds:group.items.map(it=>it.id),
+          color:chosen.color || group.items[0]?.color || state.textColor,
+          anchor,
+          anchors,
+          outside
+        });
+      }
+
+      const outsideSpecs=labelSpecs.filter(s=>s.outside);
+      const insideSpecs=labelSpecs.filter(s=>!s.outside);
+
+      if(landscape){
+        for(const side of [-1,1]){
+          const group=outsideSpecs
+            .filter(s=>(s.anchor.x>=cx?1:-1)===side)
+            .sort((a,b)=>a.anchor.y-b.anchor.y);
+          const minY=area.y+edgePad+fontSize;
+          const maxY=area.y+area.h-edgePad-fontSize;
+          group.forEach((s,i)=>{
+            s.align=side>0?"right":"left";
+            s.baseX=side>0 ? area.x+area.w-edgePad : area.x+edgePad;
+            const ideal=s.anchor.y;
+            const slot=group.length===1 ? ideal : minY+(i+1)*(maxY-minY)/(group.length+1);
+            s.baseY=clamp((ideal+slot)/2,minY,maxY);
+          });
+        }
+      }else{
+        for(const side of [-1,1]){
+          const group=outsideSpecs
+            .filter(s=>(s.anchor.y>=cy?1:-1)===side)
+            .sort((a,b)=>a.anchor.x-b.anchor.x);
+          const minX=area.x+edgePad+fontSize;
+          const maxX=area.x+area.w-edgePad-fontSize;
+          group.forEach((s,i)=>{
+            s.align="center";
+            s.baseY=side>0 ? area.y+area.h-edgePad : area.y+edgePad;
+            const ideal=s.anchor.x;
+            const slot=group.length===1 ? ideal : minX+(i+1)*(maxX-minX)/(group.length+1);
+            s.baseX=clamp((ideal+slot)/2,minX,maxX);
+          });
+        }
+      }
+
+      for(const s of insideSpecs){
+        let vx=cx-s.anchor.x, vy=cy-s.anchor.y;
+        const len=Math.hypot(vx,vy)||1;
+        vx/=len; vy/=len;
+        const dist=Math.max(stroke+coilGap*0.65,fontSize*2.1);
+        s.baseX=s.anchor.x+vx*dist;
+        s.baseY=s.anchor.y+vy*dist;
+        s.align=Math.abs(vx)<0.28 ? "center" : (vx>0?"left":"right");
+      }
+
+      ctx.save();
+      ctx.font=`600 ${fontSize}px Inter,system-ui,sans-serif`;
+      ctx.textBaseline="middle";
+      ctx.lineWidth=Math.max(1.5,minA*0.0014);
+
+      for(const s of labelSpecs){
+        if(s.baseX===undefined) continue;
+
+        // Yeni isim-bazlı konumu kullan; eski item-id konumunu da bir defaya mahsus fallback olarak destekle.
+        let saved=state.labelOffsets[s.key];
+        if(!saved){
+          for(const id of s.itemIds){
+            if(state.labelOffsets[id]){ saved=state.labelOffsets[id]; break; }
+          }
+        }
+        saved=saved || {x:0,y:0};
+
+        const dx=(Number(saved.x)||0)*canvas.width;
+        const dy=(Number(saved.y)||0)*canvas.height;
+        const tx=s.baseX+dx;
+        const ty=s.baseY+dy;
+
+        function getLabelLines(value){
+          const lines=String(value || "").split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+          return lines.length ? lines : [s.name];
+        }
+
+        const lines=getLabelLines(s.labelText);
+        const lineHeight=fontSize*1.18;
+        const lineWidths=lines.map(line=>ctx.measureText(line).width);
+        const textW=Math.max(1,...lineWidths);
+        const textH=Math.max(fontSize*1.36,(lines.length-1)*lineHeight+fontSize*1.36);
+
+        ctx.textAlign=s.align;
+        let boxX;
+        if(s.align==="right") boxX=tx-textW;
+        else if(s.align==="center") boxX=tx-textW/2;
+        else boxX=tx;
+
+        const box={
+          x:boxX,
+          y:ty-textH/2,
+          w:textW,
+          h:textH
+        };
+
+        // Çizgi bağlantı çerçevesi yazının gerçek kutusundan daha geniş:
+        // sağ/sol belirgin açık, üst biraz açık, alt aynı.
+        const sideAnchorPad=fontSize*0.70;
+        const verticalAnchorPad=fontSize*0.42;
+        const anchorBox={
+          x:box.x-sideAnchorPad,
+          y:box.y-verticalAnchorPad,
+          w:box.w+sideAnchorPad*2,
+          h:box.h+verticalAnchorPad*2
+        };
+
+        const lineAnchors=(s.anchors?.length ? s.anchors : [s.anchor]);
+        const autoPoints=autoLinePoints(anchorBox,lineAnchors);
+        const legacyManual=state.labelLineAnchors[s.key];
+        const linePoints=lineAnchors.map((a,i)=>{
+          const lineKey=`${s.key}::${i}`;
+          const manual=state.labelLineAnchors[lineKey];
+          if(manual) return pointFromNormalized(anchorBox,manual);
+          // Eski tek bağlantı ayarı varsa ilk çizgiye uygula.
+          if(i===0 && legacyManual && legacyManual.u!==undefined) return pointFromNormalized(anchorBox,legacyManual);
+          return autoPoints[i];
+        });
+
+        ctx.globalAlpha=0.88;
+        lineAnchors.forEach((a,i)=>{
+          const linePoint=linePoints[i];
+          ctx.strokeStyle=a.color || s.color;
+          ctx.beginPath();
+          ctx.moveTo(a.x,a.y);
+          ctx.lineTo(linePoint.x,linePoint.y);
+          ctx.stroke();
+        });
+
+        ctx.globalAlpha=1;
+        ctx.fillStyle=state.textColor;
+        lines.forEach((line,i)=>{
+          const lineY=ty+(i-(lines.length-1)/2)*lineHeight;
+          ctx.fillText(line,tx,lineY);
+        });
+
+        // Her çizginin bağımsız bağlantı tutamacı.
+        const handleR=Math.max(4,fontSize*0.18);
+        linePoints.forEach((linePoint,i)=>{
+          const a=lineAnchors[i];
+          ctx.fillStyle=a.color || s.color;
+          ctx.beginPath();
+          ctx.arc(linePoint.x,linePoint.y,handleR,0,Math.PI*2);
+          ctx.fill();
+
+          labelHitboxes.push({
+            kind:"lineHandle",
+            key:s.key,
+            lineKey:`${s.key}::${i}`,
+            x:linePoint.x-handleR*2.2,
+            y:linePoint.y-handleR*2.2,
+            w:handleR*4.4,
+            h:handleR*4.4,
+            box:anchorBox
+          });
+        });
+
+        const hitPad=fontSize*0.35;
+        labelHitboxes.push({
+          kind:"label",
+          key:s.key,
+          x:box.x-hitPad,
+          y:box.y-hitPad,
+          w:box.w+hitPad*2,
+          h:box.h+hitPad*2
+        });
+      }
+      ctx.restore();
+    }
+
+    {
+      const step=180;
+      const first=Math.ceil(rs/step)*step;
+      const end=rs+rd;
+      const fontSize=Math.max(8,Math.min(24,minA*0.017));
+      const clearGap=Math.max(5,stroke*0.22);
+      const tickLen=Math.max(6,stroke*0.34);
+      const labelGap=Math.max(8,stroke*0.42);
+
+      ctx.lineWidth=Math.max(1,minA*0.0013);
+      ctx.strokeStyle=rgba(state.textColor,0.52);
+      ctx.fillStyle=rgba(state.textColor,0.78);
+      ctx.font=`500 ${fontSize}px Inter,system-ui,sans-serif`;
+      ctx.textAlign="center";
+      ctx.textBaseline="middle";
+
+      let idx=0;
+      let lastShownAngle=null;
+      for(let t=first;t<=end+0.001;t+=step,idx++){
+        const elapsed=t-rs;
+        const p=pointForElapsed(elapsed);
+
+        // Aynı saatin daha dıştaki turda karşılığı varsa,
+        // iç turdaki saat çizgisi ve yazısını hiç gösterme.
+        const hasOuterCoil=elapsed+720<=rd+0.001;
+        if(hasOuterCoil) continue;
+
+        // Aynı fiziksel açıya düşen son etiket kopyasını engelle.
+        const normalizedAngle=((p.a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
+        if(lastShownAngle!==null){
+          const diff=Math.abs(normalizedAngle-lastShownAngle);
+          if(diff<0.0001 || Math.abs(diff-Math.PI*2)<0.0001) continue;
+        }
+        lastShownAngle=normalizedAngle;
+
+        const r1=p.r+stroke/2+clearGap;
+        const r2=r1+tickLen;
+        const lr=r2+labelGap+fontSize*0.35;
+
+        ctx.beginPath();
+        ctx.moveTo(cx+Math.cos(p.a)*r1,cy+Math.sin(p.a)*r1);
+        ctx.lineTo(cx+Math.cos(p.a)*r2,cy+Math.sin(p.a)*r2);
+        ctx.stroke();
+
+        if(lr>fontSize){
+          ctx.fillText(clock(t,"24"),cx+Math.cos(p.a)*lr,cy+Math.sin(p.a)*lr);
+        }
+      }
+    }
+
+    drawSpiralLabels();
+    ctx.restore();
+  }
+
+  function renderItems(){
+    const wrap=$("items");
+    wrap.innerHTML="";
+    if(!state.items.length){
+      const p=document.createElement("div");
+      p.className="empty"; p.textContent="Henüz öğe yok.";
+      wrap.appendChild(p); return;
+    }
+    state.items.forEach((it,index)=>{
+      const card=document.createElement("div");
+      card.className="item-card";
+      card.innerHTML=`
+        <div class="item-grid">
+          <div class="swatch" style="background:${escapeHtml(it.color)}"></div>
+          <div style="min-width:0">
+            <div class="item-title">${escapeHtml(it.name || "İsimsiz")}</div>
+            <div class="item-time">${escapeHtml(it.start)}–${escapeHtml(it.end)}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn small" type="button" data-edit="${index}">Düzenle</button>
+            <button class="btn small danger" type="button" data-del="${index}">Sil</button>
+          </div>
+        </div>`;
+      wrap.appendChild(card);
+    });
+    wrap.querySelectorAll("[data-edit]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const index=Number(btn.dataset.edit);
+        const it=state.items[index];
+        if(!it) return;
+        $("itemName").value=it.name || "";
+        $("itemLabel").value=state.labelTexts[it.name] ?? it.name ?? "";
+        $("itemStart").value=it.start;
+        $("itemEnd").value=it.end;
+        $("itemColor").value=it.color;
+        $("addItem").textContent="Değişiklikleri kaydet";
+        $("addItem").dataset.editing=String(index);
+        $("addItem").dataset.originalName=it.name || "";
+        $("itemLabel").dataset.manual="0";
+        $("itemName").focus();
+      });
+    });
+    wrap.querySelectorAll("[data-del]").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        const index=Number(btn.dataset.del);
+        const removed=state.items[index];
+        state.items.splice(index,1);
+        if(removed?.id && state.labelOffsets) delete state.labelOffsets[removed.id];
+        if(removed?.name){
+          const stillExists=state.items.some(it=>it.name===removed.name);
+          if(!stillExists){
+            const key=`name:${removed.name}`;
+            if(state.labelOffsets) delete state.labelOffsets[key];
+            delete state.labelTexts[removed.name];
+            if(state.labelLineAnchors){
+              delete state.labelLineAnchors[key];
+              for(const anchorKey of Object.keys(state.labelLineAnchors)){
+                if(anchorKey.startsWith(`${key}::`)) delete state.labelLineAnchors[anchorKey];
+              }
+            }
+          }
+        }
+        if($("addItem").dataset.editing===String(index)){
+          clearItemForm();
+        }else if($("addItem").dataset.editing){
+          const editing=Number($("addItem").dataset.editing);
+          if(index<editing) $("addItem").dataset.editing=String(editing-1);
+        }
+        persistAndDraw(); renderItems();
+      });
+    });
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+  }
+
+  function updateCustomSizeVisibility(){
+    const custom = state.device === "custom";
+    $("customSize").hidden = !custom;
+    $("customW").disabled = !custom;
+    $("customH").disabled = !custom;
+  }
+
+  function syncUI(){
+    $("device").value=state.device;
+    $("customW").value=state.customW; $("customH").value=state.customH;
+    updateCustomSizeVisibility();
+    $("bgColor").value=state.bgColor;
+    $("textColor").value=state.textColor;
+    $("layoutMode").value=state.layoutMode || "two";
+    $("showEmptySpiral").checked=state.showEmptySpiral!==false;
+    $("labelsEnabled").checked=Boolean(state.labelsEnabled);
+    $("spiralOptionsWrap").hidden=state.layoutMode!=="spiral";
+    $("labelToggleWrap").hidden=state.layoutMode!=="spiral";
+    $("ring2Card").hidden=state.layoutMode!=="two";
+
+    state.rings.forEach((r,i)=>{
+      const n=i+1;
+      $(`r${n}Start`).value=r.start;
+      $(`r${n}End`).value=r.end;
+    });
+    updateRoles();
+    renderItems();
+    draw();
+  }
+
+  function updateRoles(){
+    $("ring1Title").textContent=state.layoutMode==="spiral" ? "Sarmal" : "Halka 1";
+    $("ring2Title").textContent="Halka 2";
+
+    if(state.layoutMode==="one"){
+      $("ring1Role").textContent="Tek";
+      $("ring2Role").textContent="";
+    }else if(state.layoutMode==="spiral"){
+      $("ring1Role").textContent="Tek sarmal";
+      $("ring2Role").textContent="";
+    }else{
+      $("ring1Role").textContent="Dış";
+      $("ring2Role").textContent="İç";
+    }
+  }
+
+  function persistAndDraw(){
+    saveState(); updateRoles(); draw();
+  }
+
+  $("device").addEventListener("change",e=>{
+    state.device=e.target.value;
+    updateCustomSizeVisibility();
+    persistAndDraw();
+  });
+  $("customW").addEventListener("input",e=>{ state.customW=Number(e.target.value)||1920; persistAndDraw(); });
+  $("customH").addEventListener("input",e=>{ state.customH=Number(e.target.value)||1080; persistAndDraw(); });
+  $("bgColor").addEventListener("input",e=>{ state.bgColor=e.target.value; persistAndDraw(); });
+  $("textColor").addEventListener("input",e=>{ state.textColor=e.target.value; persistAndDraw(); });
+  $("layoutMode").addEventListener("change",e=>{
+    state.layoutMode=e.target.value;
+    $("spiralOptionsWrap").hidden=state.layoutMode!=="spiral";
+    $("labelToggleWrap").hidden=state.layoutMode!=="spiral";
+    $("ring2Card").hidden=state.layoutMode!=="two";
+    persistAndDraw();
+  });
+  $("showEmptySpiral").addEventListener("change",e=>{
+    state.showEmptySpiral=e.target.checked;
+    persistAndDraw();
+  });
+  $("labelsEnabled").addEventListener("change",e=>{
+    state.labelsEnabled=e.target.checked;
+    persistAndDraw();
+  });
+
+
+  [1,2].forEach(n=>{
+    ["Start","End"].forEach(key=>{
+      $(`r${n}${key}`).addEventListener("change",e=>{
+        const prop=key.toLowerCase();
+        state.rings[n-1][prop]=e.target.value;
+        persistAndDraw();
+      });
+    });
+  });
+
+  function clearItemForm(){
+    $("itemName").value="";
+    $("itemLabel").value="";
+    $("itemLabel").dataset.manual="0";
+    $("addItem").textContent="Öğe ekle";
+    delete $("addItem").dataset.editing;
+    delete $("addItem").dataset.originalName;
+  }
+
+  $("addItem").addEventListener("click",()=>{
+    const name=$("itemName").value.trim();
+    const labelText=$("itemLabel").value.trim() || name;
+    const start=$("itemStart").value;
+    const end=$("itemEnd").value;
+    const color=$("itemColor").value;
+    if(!name){ $("itemName").focus(); return; }
+    if(!start || !end || mins(start)===mins(end)){
+      alert("Başlangıç ve bitiş saati farklı olmalı.");
+      return;
+    }
+
+    const editing=$("addItem").dataset.editing;
+    if(editing!==undefined){
+      const index=Number(editing);
+      const oldName=state.items[index]?.name || "";
+      if(state.items[index]){
+        state.items[index]={...state.items[index],name,start,end,color};
+      }
+
+      // İsim ve etiket aynı anda değiştirildiyse ikisini de aynen kaydet.
+      state.labelTexts[name]=labelText;
+
+      if(oldName!==name){
+        const oldStillExists=state.items.some((it,i)=>i!==index && it.name===oldName);
+        if(!oldStillExists){
+          delete state.labelTexts[oldName];
+
+          const oldKey=`name:${oldName}`;
+          const newKey=`name:${name}`;
+
+          // Etiket konumu ve çizgi bağlantı ayarlarını yeni ada taşı.
+          if(state.labelOffsets[oldKey] && !state.labelOffsets[newKey]){
+            state.labelOffsets[newKey]=state.labelOffsets[oldKey];
+          }
+          delete state.labelOffsets[oldKey];
+
+          if(state.labelLineAnchors[oldKey] && !state.labelLineAnchors[newKey]){
+            state.labelLineAnchors[newKey]=state.labelLineAnchors[oldKey];
+          }
+          delete state.labelLineAnchors[oldKey];
+
+          for(const k of Object.keys(state.labelLineAnchors)){
+            if(k.startsWith(`${oldKey}::`)){
+              const suffix=k.slice(oldKey.length);
+              const newAnchorKey=`${newKey}${suffix}`;
+              if(!state.labelLineAnchors[newAnchorKey]){
+                state.labelLineAnchors[newAnchorKey]=state.labelLineAnchors[k];
+              }
+              delete state.labelLineAnchors[k];
+            }
+          }
+        }
+      }
+    }else{
+      state.items.push({id:makeItemId(),name,start,end,color});
+      state.labelTexts[name]=labelText;
+    }
+
+    clearItemForm();
+    saveState(); renderItems(); draw();
+  });
+  $("itemName").addEventListener("input",e=>{
+    const currentName=e.target.value;
+    const editing=$("addItem").dataset.editing;
+
+    // Yeni öğede etiket varsayılan olarak isimle initialize edilir.
+    // Düzenlemede ise mevcut etiket korunur; isim ve etiket bağımsız değiştirilebilir.
+    if(editing===undefined && $("itemLabel").dataset.manual!=="1"){
+      $("itemLabel").value=currentName;
+    }
+  });
+  $("itemLabel").addEventListener("input",()=>{ $("itemLabel").dataset.manual="1"; });
+  $("itemName").addEventListener("keydown",e=>{ if(e.key==="Enter") $("addItem").click(); });
+
+  $("bgImage").addEventListener("change",e=>{
+    const file=e.target.files?.[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=()=>{
+      bgImageDataUrl=String(reader.result || "");
+      const img=new Image();
+      img.onload=()=>{ bgImage=img; saveState(); draw(); };
+      img.src=bgImageDataUrl;
+    };
+    reader.readAsDataURL(file);
+  });
+  $("clearBg").addEventListener("click",()=>{
+    bgImage=null; bgImageDataUrl=""; $("bgImage").value=""; saveState(); draw();
+  });
+
+  function pointerToCanvas(e){
+    const rect=canvas.getBoundingClientRect();
+    return {
+      x:(e.clientX-rect.left)*(canvas.width/rect.width),
+      y:(e.clientY-rect.top)*(canvas.height/rect.height)
+    };
+  }
+
+  function labelAtPoint(p){
+    // Tutamaçlar öncelikli.
+    for(let pass=0;pass<2;pass++){
+      const kind=pass===0?"lineHandle":"label";
+      for(let i=labelHitboxes.length-1;i>=0;i--){
+        const b=labelHitboxes[i];
+        if(b.kind!==kind) continue;
+        if(p.x>=b.x && p.x<=b.x+b.w && p.y>=b.y && p.y<=b.y+b.h) return b;
+      }
+    }
+    return null;
+  }
+
+  function normalizedPerimeterPoint(p,box){
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    const rx=clamp((p.x-box.x)/Math.max(1,box.w),0,1);
+    const ry=clamp((p.y-box.y)/Math.max(1,box.h),0,1);
+    const dL=rx, dR=1-rx, dT=ry, dB=1-ry;
+    const m=Math.min(dL,dR,dT,dB);
+    if(m===dL) return {u:0,v:ry};
+    if(m===dR) return {u:1,v:ry};
+    if(m===dT) return {u:rx,v:0};
+    return {u:rx,v:1};
+  }
+
+  canvas.addEventListener("pointerdown",e=>{
+    const p=pointerToCanvas(e);
+    const hit=(state.layoutMode==="spiral" && state.labelsEnabled) ? labelAtPoint(p) : null;
+
+    if(hit?.kind==="lineHandle"){
+      labelDrag={
+        type:"line",
+        pointerId:e.pointerId,
+        key:hit.key,
+        lineKey:hit.lineKey,
+        box:hit.box
+      };
+      canvas.style.cursor="crosshair";
+    }else if(hit?.kind==="label"){
+      const current=state.labelOffsets[hit.key] || {x:0,y:0};
+      labelDrag={
+        type:"label",
+        pointerId:e.pointerId,
+        key:hit.key,
+        startX:p.x,startY:p.y,
+        baseX:Number(current.x)||0,
+        baseY:Number(current.y)||0
+      };
+      canvas.style.cursor="grabbing";
+    }else{
+      const current=state.compositionOffset || {x:0,y:0};
+      labelDrag={
+        type:"composition",
+        pointerId:e.pointerId,
+        startX:p.x,startY:p.y,
+        baseX:Number(current.x)||0,
+        baseY:Number(current.y)||0
+      };
+      canvas.style.cursor="grabbing";
+    }
+
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+
+  canvas.addEventListener("pointermove",e=>{
+    const p=pointerToCanvas(e);
+    if(labelDrag && labelDrag.pointerId===e.pointerId){
+      if(labelDrag.type==="line"){
+        state.labelLineAnchors[labelDrag.lineKey]=normalizedPerimeterPoint(p,labelDrag.box);
+      }else if(labelDrag.type==="label"){
+        const dx=(p.x-labelDrag.startX)/canvas.width;
+        const dy=(p.y-labelDrag.startY)/canvas.height;
+        state.labelOffsets[labelDrag.key]={x:labelDrag.baseX+dx,y:labelDrag.baseY+dy};
+      }else if(labelDrag.type==="composition"){
+        const dx=(p.x-labelDrag.startX)/canvas.width;
+        const dy=(p.y-labelDrag.startY)/canvas.height;
+        state.compositionOffset={x:labelDrag.baseX+dx,y:labelDrag.baseY+dy};
+      }
+      draw();
+      e.preventDefault();
+      return;
+    }
+
+    if(state.layoutMode==="spiral" && state.labelsEnabled){
+      const hit=labelAtPoint(p);
+      canvas.style.cursor=hit ? (hit.kind==="lineHandle" ? "crosshair" : "grab") : "grab";
+    }else{
+      canvas.style.cursor="grab";
+    }
+  });
+
+  function finishLabelDrag(e){
+    if(!labelDrag || (e.pointerId!==undefined && labelDrag.pointerId!==e.pointerId)) return;
+    if(e.pointerId!==undefined && canvas.hasPointerCapture?.(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    labelDrag=null;
+    canvas.style.cursor="default";
+    saveState();
+  }
+  canvas.addEventListener("pointerup",finishLabelDrag);
+  canvas.addEventListener("pointercancel",finishLabelDrag);
+
+  $("centerComposition").addEventListener("click",()=>{
+    state.compositionOffset={x:0,y:0};
+    saveState();
+    draw();
+  });
+
+
+  $("download").addEventListener("click",()=>{
+    draw();
+    canvas.toBlob(blob=>{
+      if(!blob) return;
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      const [w,h]=getSize();
+      a.href=url;
+      a.download=`plan-wallpaper-${state.device}-${w}x${h}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    },"image/png");
+  });
+
+  $("googleLogin").addEventListener("click",async()=>{
+    $("authMessage").textContent="";
+    if(!supa){
+      $("authMessage").textContent="Supabase istemcisi yüklenemedi.";
+      return;
+    }
+    if(location.protocol==="file:"){
+      $("authMessage").textContent="Google girişi PWA web adresinden çalışır. Şimdilik misafir kullanabilirsin.";
+      return;
+    }
+    $("googleLogin").disabled=true;
+    $("authMessage").textContent="Google'a yönlendiriliyor…";
+    try{
+      const redirectTo=location.href.split(/[?#]/)[0];
+      const {error}=await supa.auth.signInWithOAuth({
+        provider:"google",
+        options:{redirectTo}
+      });
+      if(error) throw error;
+    }catch(err){
+      console.error(err);
+      $("authMessage").textContent=err?.message || "Google girişi başlatılamadı.";
+      $("googleLogin").disabled=false;
+    }
+  });
+
+  $("guestLogin").addEventListener("click",()=>activateGuest());
+
+  $("accountBtn").addEventListener("click",async()=>{
+    if(currentUser){
+      if(!confirm("Hesaptan çıkılsın mı?")) return;
+      await flushCloudSync();
+      const {error}=await supa.auth.signOut();
+      if(error){
+        setAuthStatus("Çıkış yapılamadı.","err");
+        console.error(error);
+      }
+    }else{
+      $("authMessage").textContent="";
+      $("googleLogin").disabled=false;
+      $("authOverlay").hidden=false;
+    }
+  });
+
+  window.addEventListener("online",()=>{
+    if(currentUser) activateUser(currentUser);
+  });
+
+  if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.register("./sw.js").catch(err=>console.warn("SW:",err));
+    });
+  }
+
+  window.addEventListener("resize",draw);
+  canvas.style.cursor="grab";
+  syncUI();
+  loadBackgroundImage();
+  initializeAuth();
+})();
+</script>
+</body>
+</html>
