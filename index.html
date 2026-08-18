@@ -783,7 +783,7 @@
     const ring=state.rings[0];
     const rs=mins(ring.start);
     const rd=windowDuration(ring,true);
-    const spiralItemVisualOffset=-5; // Yalnızca renkli öğelerin görsel konumu; zaman mantığını değiştirmez.
+    const spiralItemVisualOffset=0; // Renkli öğeleri gerçek zaman sınırlarına hizala.
     const totalTurns=Math.max(0,rd/720);
     const radialTravel=Math.max(0,totalTurns*pitch);
     const innerR=Math.max(stroke*1.7,outerR-radialTravel);
@@ -897,8 +897,7 @@
         e2=Math.max(0,Math.min(rd,e2));
         if(e2<=e1) continue;
 
-        // Renkli segmenti yalnızca görsel olarak 5 dk erken çiz.
-        // Kesişim, süre ve gerçek saat değerleri değişmez.
+        // Renkli segmenti gerçek zaman aralığında çiz.
         const visualE1=Math.max(0,Math.min(rd,e1+spiralItemVisualOffset));
         const visualE2=Math.max(0,Math.min(rd,e2+spiralItemVisualOffset));
         if(visualE2<=visualE1) continue;
