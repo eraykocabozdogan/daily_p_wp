@@ -260,7 +260,7 @@
   const defaultState = {
     device:"mac", customW:1920, customH:1080,
     bgColor:"#10141c", textColor:"#f7f8fb",
-    layoutMode:"two", showEmptySpiral:true, labelsEnabled:false, compositionOffset:{x:0,y:0}, labelOffsets:{}, labelLineAnchors:{}, labelTexts:{},
+    layoutMode:"two", showEmptySpiral:true, labelsEnabled:false, compositionOffset:{x:0,y:0}, compositionScale:1, labelOffsets:{}, labelLineAnchors:{}, labelTexts:{},
     rings:[
       {start:"00:00",end:"12:00"},
       {start:"12:00",end:"00:00"}
@@ -300,6 +300,7 @@
       compositionOffset:saved.compositionOffset && typeof saved.compositionOffset==="object"
         ? {x:Number(saved.compositionOffset.x)||0,y:Number(saved.compositionOffset.y)||0}
         : {x:0,y:0},
+      compositionScale:Math.max(0.5,Math.min(2.5,Number(saved.compositionScale)||1)),
       labelOffsets:saved.labelOffsets && typeof saved.labelOffsets==="object" ? saved.labelOffsets : {},
       labelLineAnchors:saved.labelLineAnchors && typeof saved.labelLineAnchors==="object" ? saved.labelLineAnchors : {},
       labelTexts:saved.labelTexts && typeof saved.labelTexts==="object" ? saved.labelTexts : {},
@@ -636,7 +637,15 @@
     const pad=Math.max(20,minDim*0.06);
     const offsetX=(Number(state.compositionOffset?.x)||0)*w;
     const offsetY=(Number(state.compositionOffset?.y)||0)*h;
-    const ringArea={x:offsetX,y:offsetY,w,h};
+    const compositionScale=Math.max(0.5,Math.min(2.5,Number(state.compositionScale)||1));
+    const scaledW=w*compositionScale;
+    const scaledH=h*compositionScale;
+    const ringArea={
+      x:(w-scaledW)/2+offsetX,
+      y:(h-scaledH)/2+offsetY,
+      w:scaledW,
+      h:scaledH
+    };
 
     if(state.layoutMode==="spiral") drawSpiralMode(ringArea,pad);
     else drawRings(ringArea,pad);
@@ -1580,6 +1589,16 @@
     if(m===dT) return {u:rx,v:0};
     return {u:rx,v:1};
   }
+
+  canvas.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const current=Math.max(0.5,Math.min(2.5,Number(state.compositionScale)||1));
+    const next=Math.max(0.5,Math.min(2.5,current*Math.exp(-e.deltaY*0.001)));
+    if(Math.abs(next-current)<0.0001) return;
+    state.compositionScale=next;
+    saveState();
+    draw();
+  },{passive:false});
 
   canvas.addEventListener("pointerdown",e=>{
     const p=pointerToCanvas(e);
