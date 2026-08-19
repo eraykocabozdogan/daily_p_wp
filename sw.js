@@ -1,4 +1,4 @@
-const CACHE_NAME="plan-wallpaper-v5";
+const CACHE_NAME="plan-wallpaper-v6";
 const APP_SHELL=[
   "./",
   "./index.html",
@@ -7,9 +7,18 @@ const APP_SHELL=[
   "./icon-512.png"
 ];
 
+async function cacheAppShell(){
+  const cache=await caches.open(CACHE_NAME);
+  await Promise.all(APP_SHELL.map(async url=>{
+    const request=new Request(new URL(url,self.location).href,{cache:"reload"});
+    const response=await fetch(request);
+    if(!response.ok) throw new Error(`Failed to cache ${url}`);
+    await cache.put(request,response);
+  }));
+}
+
 self.addEventListener("install",event=>{
-  event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  event.waitUntil(cacheAppShell().then(()=>self.skipWaiting()));
 });
 
 self.addEventListener("activate",event=>{
@@ -25,7 +34,7 @@ self.addEventListener("fetch",event=>{
 
   if(req.mode==="navigate"){
     event.respondWith(
-      fetch(req).then(res=>{
+      fetch(new Request(req,{cache:"no-store"})).then(res=>{
         const copy=res.clone();
         caches.open(CACHE_NAME).then(cache=>cache.put("./index.html",copy));
         return res;

@@ -1775,7 +1775,9 @@
 
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
     window.addEventListener("load",()=>{
-      navigator.serviceWorker.register("./sw.js").catch(err=>console.warn("SW:",err));
+      navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"})
+        .then(registration=>registration.update())
+        .catch(err=>console.warn("SW:",err));
     });
   }
 
