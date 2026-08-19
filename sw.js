@@ -1,4 +1,4 @@
-const CACHE_NAME="plan-wallpaper-v4";
+const CACHE_NAME="plan-wallpaper-v5";
 const APP_SHELL=[
   "./",
   "./index.html",
