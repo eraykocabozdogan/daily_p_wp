@@ -172,14 +172,6 @@
         </label>
       </div>
 
-      <div id="labelToggleWrap" hidden style="margin-top:10px">
-        <label class="inline" for="labelsEnabled" style="color:var(--text);margin:0">
-          <input id="labelsEnabled" type="checkbox">
-          <span>Etiket</span>
-        </label>
-        <div class="note" style="margin-top:5px">Etiketleri önizleme üzerinde sürükleyebilirsin.</div>
-      </div>
-
       <div class="ring-card" id="ring1Card">
         <div class="ring-head"><strong id="ring1Title">Halka 1</strong><span class="note" id="ring1Role">Dış</span></div>
         <div class="row">
@@ -260,7 +252,7 @@
   const defaultState = {
     device:"mac", customW:1920, customH:1080,
     bgColor:"#10141c", textColor:"#f7f8fb",
-    layoutMode:"two", showEmptySpiral:true, labelsEnabled:false, compositionOffset:{x:0,y:0}, compositionScale:1, labelOffsets:{}, labelLineAnchors:{}, labelTexts:{},
+    layoutMode:"two", showEmptySpiral:true, visibleItemLabels:{}, compositionOffset:{x:0,y:0}, compositionScale:1, labelOffsets:{}, labelLineAnchors:{}, labelTexts:{},
     rings:[
       {start:"00:00",end:"12:00"},
       {start:"12:00",end:"00:00"}
@@ -296,7 +288,11 @@
       ...saved,
       layoutMode:migratedMode,
       showEmptySpiral:saved.showEmptySpiral!==false,
-      labelsEnabled:Boolean(saved.labelsEnabled),
+      visibleItemLabels:saved.visibleItemLabels && typeof saved.visibleItemLabels==="object"
+        ? saved.visibleItemLabels
+        : (saved.labelsEnabled
+          ? Object.fromEntries(normalizeItems(saved.items).map(item=>[item.id,true]))
+          : {}),
       compositionOffset:saved.compositionOffset && typeof saved.compositionOffset==="object"
         ? {x:Number(saved.compositionOffset.x)||0,y:Number(saved.compositionOffset.y)||0}
         : {x:0,y:0},
@@ -343,6 +339,7 @@
   let bgImage=null;
   let bgImageDataUrl=initialData.bgImageDataUrl;
   let labelHitboxes=[];
+  let itemHitRegions=[];
   let labelDrag=null;
 
   function currentAppData(){
@@ -621,6 +618,7 @@
 
   function draw(){
     labelHitboxes=[];
+    itemHitRegions=[];
     const [w,h]=getSize();
     if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; }
     $("canvasMeta").textContent=` · ${w}×${h}`;
@@ -717,10 +715,47 @@
         ctx.beginPath();
         drawArcByTime(cx,cy,radius,ov.a,ov.b-ov.a);
         ctx.stroke();
+        itemHitRegions.push({
+          type:"ring",itemId:item.id,cx,cy,radius,stroke,startAbs:ov.a,duration:ov.b-ov.a
+        });
       }
     }
 
     drawTicks(ring,radius,stroke,cx,cy,minA,rd,isInner);
+    drawRingItemLabels(ring,radius,stroke,cx,cy,minA,isInner);
+    ctx.restore();
+  }
+
+  function labelKey(item){ return `item:${item.id}`; }
+
+  function labelTextFor(item){
+    const text=state.labelTexts[item.id] ?? state.labelTexts[item.name] ?? item.name;
+    return text || "İsimsiz";
+  }
+
+  function drawRingItemLabels(ring,radius,stroke,cx,cy,minA,isInner){
+    const fontSize=Math.max(10,Math.min(24,minA*0.017));
+    const labelGap=Math.max(8,stroke*0.42);
+    ctx.save();
+    ctx.font=`600 ${fontSize}px Inter,system-ui,sans-serif`;
+    ctx.textBaseline="middle";
+
+    for(const item of state.items){
+      if(!state.visibleItemLabels[item.id]) continue;
+      for(const ov of overlapsForRing(item,ring,false)){
+        const mid=(ov.a+ov.b)/2;
+        const a=clockAngle(mid);
+        const labelRadius=isInner
+          ? radius-stroke/2-labelGap-fontSize*0.55
+          : radius+stroke/2+labelGap+fontSize*0.55;
+        if(labelRadius<=fontSize) continue;
+        const x=cx+Math.cos(a)*labelRadius;
+        const y=cy+Math.sin(a)*labelRadius;
+        ctx.fillStyle=item.color;
+        ctx.textAlign=Math.abs(Math.cos(a))<0.28 ? "center" : (Math.cos(a)>0 ? "left" : "right");
+        ctx.fillText(labelTextFor(item),x,y);
+      }
+    }
     ctx.restore();
   }
 
@@ -889,6 +924,7 @@
       ctx.closePath();
       ctx.fillStyle=color;
       ctx.fill();
+      return {points:pts,half};
     }
 
     ctx.save();
@@ -910,13 +946,12 @@
         const visualE1=Math.max(0,Math.min(rd,e1+spiralItemVisualOffset));
         const visualE2=Math.max(0,Math.min(rd,e2+spiralItemVisualOffset));
         if(visualE2<=visualE1) continue;
-        drawShapedSegment(visualE1,visualE2,item.color);
+        const shape=drawShapedSegment(visualE1,visualE2,item.color);
+        if(shape) itemHitRegions.push({type:"spiral",itemId:item.id,...shape});
       }
     }
 
     function drawSpiralLabels(){
-      if(!state.labelsEnabled) return;
-
       const outerWindowStart=Math.max(0,rd-720);
       const landscape=canvas.width>=canvas.height;
       const fontSize=Math.max(12,Math.min(34,minA*0.020));
@@ -1017,17 +1052,18 @@
         return results.sort((a,b)=>a.index-b.index).map(r=>r.point);
       }
 
-      // Tam aynı isimli öğeleri tek etiket grubunda birleştir.
-      const groups=new Map();
+      const groups=[];
       for(const item of state.items){
-        const name=item.name || "İsimsiz";
-        if(!groups.has(name)) groups.set(name,{name,key:labelKey(name),items:[],segments:[]});
-        const g=groups.get(name);
-        g.items.push(item);
-        g.segments.push(...elapsedSegments(item));
+        if(!state.visibleItemLabels[item.id]) continue;
+        groups.push({
+          name:item.name || "İsimsiz",
+          key:labelKey(item),
+          items:[item],
+          segments:elapsedSegments(item)
+        });
       }
 
-      for(const group of groups.values()){
+      for(const group of groups){
         const segs=group.segments;
         if(!segs.length) continue;
 
@@ -1061,7 +1097,7 @@
           };
         });
 
-        const labelText=(state.labelTexts[group.name] ?? group.name) || group.name;
+        const labelText=labelTextFor(group.items[0]);
 
         labelSpecs.push({
           key:group.key,
@@ -1325,7 +1361,7 @@
         const it=state.items[index];
         if(!it) return;
         $("itemName").value=it.name || "";
-        $("itemLabel").value=state.labelTexts[it.name] ?? it.name ?? "";
+        $("itemLabel").value=labelTextFor(it);
         $("itemStart").value=it.start;
         $("itemEnd").value=it.end;
         $("itemColor").value=it.color;
@@ -1341,19 +1377,14 @@
         const index=Number(btn.dataset.del);
         const removed=state.items[index];
         state.items.splice(index,1);
-        if(removed?.id && state.labelOffsets) delete state.labelOffsets[removed.id];
-        if(removed?.name){
-          const stillExists=state.items.some(it=>it.name===removed.name);
-          if(!stillExists){
-            const key=`name:${removed.name}`;
-            if(state.labelOffsets) delete state.labelOffsets[key];
-            delete state.labelTexts[removed.name];
-            if(state.labelLineAnchors){
-              delete state.labelLineAnchors[key];
-              for(const anchorKey of Object.keys(state.labelLineAnchors)){
-                if(anchorKey.startsWith(`${key}::`)) delete state.labelLineAnchors[anchorKey];
-              }
-            }
+        if(removed?.id){
+          const key=labelKey(removed);
+          delete state.visibleItemLabels[removed.id];
+          delete state.labelOffsets[key];
+          delete state.labelTexts[removed.id];
+          delete state.labelLineAnchors[key];
+          for(const anchorKey of Object.keys(state.labelLineAnchors)){
+            if(anchorKey.startsWith(`${key}::`)) delete state.labelLineAnchors[anchorKey];
           }
         }
         if($("addItem").dataset.editing===String(index)){
@@ -1386,9 +1417,7 @@
     $("textColor").value=state.textColor;
     $("layoutMode").value=state.layoutMode || "two";
     $("showEmptySpiral").checked=state.showEmptySpiral!==false;
-    $("labelsEnabled").checked=Boolean(state.labelsEnabled);
     $("spiralOptionsWrap").hidden=state.layoutMode!=="spiral";
-    $("labelToggleWrap").hidden=state.layoutMode!=="spiral";
     $("ring2Card").hidden=state.layoutMode!=="two";
 
     state.rings.forEach((r,i)=>{
@@ -1433,7 +1462,6 @@
   $("layoutMode").addEventListener("change",e=>{
     state.layoutMode=e.target.value;
     $("spiralOptionsWrap").hidden=state.layoutMode!=="spiral";
-    $("labelToggleWrap").hidden=state.layoutMode!=="spiral";
     $("ring2Card").hidden=state.layoutMode!=="two";
     persistAndDraw();
   });
@@ -1441,12 +1469,6 @@
     state.showEmptySpiral=e.target.checked;
     persistAndDraw();
   });
-  $("labelsEnabled").addEventListener("change",e=>{
-    state.labelsEnabled=e.target.checked;
-    persistAndDraw();
-  });
-
-
   [1,2].forEach(n=>{
     ["Start","End"].forEach(key=>{
       $(`r${n}${key}`).addEventListener("change",e=>{
@@ -1481,48 +1503,15 @@
     const editing=$("addItem").dataset.editing;
     if(editing!==undefined){
       const index=Number(editing);
-      const oldName=state.items[index]?.name || "";
-      if(state.items[index]){
-        state.items[index]={...state.items[index],name,start,end,color};
-      }
-
-      // İsim ve etiket aynı anda değiştirildiyse ikisini de aynen kaydet.
-      state.labelTexts[name]=labelText;
-
-      if(oldName!==name){
-        const oldStillExists=state.items.some((it,i)=>i!==index && it.name===oldName);
-        if(!oldStillExists){
-          delete state.labelTexts[oldName];
-
-          const oldKey=`name:${oldName}`;
-          const newKey=`name:${name}`;
-
-          // Etiket konumu ve çizgi bağlantı ayarlarını yeni ada taşı.
-          if(state.labelOffsets[oldKey] && !state.labelOffsets[newKey]){
-            state.labelOffsets[newKey]=state.labelOffsets[oldKey];
-          }
-          delete state.labelOffsets[oldKey];
-
-          if(state.labelLineAnchors[oldKey] && !state.labelLineAnchors[newKey]){
-            state.labelLineAnchors[newKey]=state.labelLineAnchors[oldKey];
-          }
-          delete state.labelLineAnchors[oldKey];
-
-          for(const k of Object.keys(state.labelLineAnchors)){
-            if(k.startsWith(`${oldKey}::`)){
-              const suffix=k.slice(oldKey.length);
-              const newAnchorKey=`${newKey}${suffix}`;
-              if(!state.labelLineAnchors[newAnchorKey]){
-                state.labelLineAnchors[newAnchorKey]=state.labelLineAnchors[k];
-              }
-              delete state.labelLineAnchors[k];
-            }
-          }
-        }
+      const item=state.items[index];
+      if(item){
+        state.items[index]={...item,name,start,end,color};
+        state.labelTexts[item.id]=labelText;
       }
     }else{
-      state.items.push({id:makeItemId(),name,start,end,color});
-      state.labelTexts[name]=labelText;
+      const item={id:makeItemId(),name,start,end,color};
+      state.items.push(item);
+      state.labelTexts[item.id]=labelText;
     }
 
     clearItemForm();
@@ -1578,6 +1567,35 @@
     return null;
   }
 
+  function pointToSegmentDistanceSquared(p,a,b){
+    const dx=b.x-a.x, dy=b.y-a.y;
+    const lenSq=dx*dx+dy*dy;
+    const t=lenSq ? Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/lenSq)) : 0;
+    const x=a.x+dx*t, y=a.y+dy*t;
+    const ox=p.x-x, oy=p.y-y;
+    return ox*ox+oy*oy;
+  }
+
+  function itemAtPoint(p){
+    for(let i=itemHitRegions.length-1;i>=0;i--){
+      const region=itemHitRegions[i];
+      if(region.type==="ring"){
+        const dx=p.x-region.cx, dy=p.y-region.cy;
+        if(Math.abs(Math.hypot(dx,dy)-region.radius)>region.stroke/2+6) continue;
+        const angle=Math.atan2(dy,dx);
+        const start=clockAngle(region.startAbs);
+        const elapsed=(((angle-start)%(Math.PI*2)+Math.PI*2)%(Math.PI*2))*720/(Math.PI*2);
+        if(elapsed<=region.duration+0.001) return region.itemId;
+      }else{
+        const limit=(region.half+6)**2;
+        for(let j=1;j<region.points.length;j++){
+          if(pointToSegmentDistanceSquared(p,region.points[j-1],region.points[j])<=limit) return region.itemId;
+        }
+      }
+    }
+    return null;
+  }
+
   function normalizedPerimeterPoint(p,box){
     const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
     const rx=clamp((p.x-box.x)/Math.max(1,box.w),0,1);
@@ -1602,7 +1620,7 @@
 
   canvas.addEventListener("pointerdown",e=>{
     const p=pointerToCanvas(e);
-    const hit=(state.layoutMode==="spiral" && state.labelsEnabled) ? labelAtPoint(p) : null;
+    const hit=state.layoutMode==="spiral" ? labelAtPoint(p) : null;
 
     if(hit?.kind==="lineHandle"){
       labelDrag={
@@ -1625,6 +1643,15 @@
       };
       canvas.style.cursor="grabbing";
     }else{
+      const itemId=itemAtPoint(p);
+      if(itemId){
+        state.visibleItemLabels[itemId]=!state.visibleItemLabels[itemId];
+        saveState();
+        draw();
+        canvas.style.cursor="pointer";
+        e.preventDefault();
+        return;
+      }
       const current=state.compositionOffset || {x:0,y:0};
       labelDrag={
         type:"composition",
@@ -1659,11 +1686,11 @@
       return;
     }
 
-    if(state.layoutMode==="spiral" && state.labelsEnabled){
-      const hit=labelAtPoint(p);
-      canvas.style.cursor=hit ? (hit.kind==="lineHandle" ? "crosshair" : "grab") : "grab";
+    const hit=state.layoutMode==="spiral" ? labelAtPoint(p) : null;
+    if(hit){
+      canvas.style.cursor=hit.kind==="lineHandle" ? "crosshair" : "grab";
     }else{
-      canvas.style.cursor="grab";
+      canvas.style.cursor=itemAtPoint(p) ? "pointer" : "grab";
     }
   });
 
