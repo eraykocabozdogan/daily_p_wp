@@ -67,6 +67,18 @@
   .seg{display:flex;gap:8px}
   .seg button{flex:1}
   .active{border-color:#8ba8d1!important;background:#202c3b!important}
+  .sidebar-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:0 0 16px}
+  .sidebar-tabs .btn{padding:8px 6px;font-size:12px}
+  .sidebar-panel[hidden],.device-finder[hidden],.habit-time[hidden]{display:none}
+  .device-finder{border:1px solid var(--line);border-radius:11px;padding:10px;margin-top:9px;background:#12171e}
+  .device-result{margin-top:8px;padding:8px;border-radius:8px;background:var(--panel);font-size:11px;color:var(--muted)}
+  .habit-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+  .habit-choice button{display:flex;align-items:center;justify-content:center;gap:7px}
+  .habit-dot{width:16px;height:16px;border-radius:50%;border:1px solid #87909c;display:inline-block}
+  .habit-dot.good{background:#fff}
+  .habit-dot.bad{background:#000}
+  .habit-kind-badge{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .habit-status{font-size:11px;color:var(--muted);margin-top:2px}
 
   .brand-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   .auth-status{font-size:11px;color:var(--muted);margin:-10px 0 16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -117,27 +129,36 @@
     <div class="brand-row">
       <div>
         <h1>Plan Wallpaper</h1>
-        <div class="sub">Günlük planını halka görünümünde PNG olarak üret.</div>
+        <div class="sub">Günlük planını ve alışkanlıklarını PNG olarak üret.</div>
       </div>
       <button class="btn small" id="accountBtn" type="button">Giriş</button>
     </div>
     <div class="auth-status" id="authStatus"><span class="sync-dot"></span>Başlatılıyor…</div>
 
+    <div class="sidebar-tabs" role="tablist" aria-label="Düzenleme bölümü">
+      <button class="btn active" id="designTab" type="button" role="tab" aria-selected="true">Tasarım</button>
+      <button class="btn" id="contentTab" type="button" role="tab" aria-selected="false">Plan &amp; Alışkanlıklar</button>
+    </div>
+
+    <div class="sidebar-panel" id="designPanel">
+
     <section class="section">
       <h2>Çıktı</h2>
-      <label for="device">Cihaz</label>
-      <select id="device">
-        <option value="mac">MacBook Air M1 — 2560×1600</option>
-        <option value="monitor">27" 2K Monitör — 2560×1440</option>
-        <option value="iphone">iPhone 11 — 828×1792</option>
-        <option value="watch">Huawei Watch GT 5 Pro — 466×466</option>
-        <option value="custom">Özel boyut</option>
-      </select>
-      <div id="customSize" hidden>
+      <div class="row">
+        <div><label for="customW">Genişlik</label><input id="customW" type="number" min="200" max="8192" value="1920"></div>
+        <div><label for="customH">Yükseklik</label><input id="customH" type="number" min="200" max="8192" value="1080"></div>
+      </div>
+      <button class="btn small" id="deviceFinderToggle" type="button" style="width:100%;margin-top:9px">Cihaz kataloğundan seç</button>
+      <div class="device-finder" id="deviceFinder" hidden>
+        <label for="deviceSearch">Cihaz ara</label>
+        <input id="deviceSearch" type="text" placeholder="Örn. iPhone, Galaxy, MacBook">
         <div class="row">
-          <div><label for="customW">Genişlik</label><input id="customW" type="number" min="200" max="8192" value="1920"></div>
-          <div><label for="customH">Yükseklik</label><input id="customH" type="number" min="200" max="8192" value="1080"></div>
+          <div><label for="deviceCategory">Kategori</label><select id="deviceCategory"></select></div>
+          <div><label for="deviceBrand">Marka</label><select id="deviceBrand"></select></div>
         </div>
+        <label for="deviceModel">Model</label>
+        <select id="deviceModel"></select>
+        <div class="device-result" id="deviceResult">Özel boyut seçili.</div>
       </div>
     </section>
 
@@ -189,6 +210,10 @@
       </div>
     </section>
 
+    </div>
+
+    <div class="sidebar-panel" id="contentPanel" hidden>
+
     <section class="section">
       <h2>Plan öğeleri</h2>
       <label for="itemName">İsim</label>
@@ -207,6 +232,28 @@
       <button class="btn primary" id="addItem" type="button" style="width:100%;margin-top:10px">Öğe ekle</button>
       <div class="items" id="items"></div>
     </section>
+
+    <section class="section">
+      <h2>Alışkanlıklar</h2>
+      <div class="note">Aynı anda en fazla bir iyi ve bir kötü alışkanlık eklenebilir. Merkezdeki simgeye tıklayarak bugünkü durumu değiştirebilirsin.</div>
+      <label for="habitName">İsim</label>
+      <input id="habitName" type="text" placeholder="Örn. Erken kalk / Sigara içme">
+      <div class="habit-choice" role="group" aria-label="Alışkanlık türü">
+        <button class="btn active" id="habitGood" type="button" data-habit-kind="good"><span class="habit-dot good"></span>İyi alışkanlık</button>
+        <button class="btn" id="habitBad" type="button" data-habit-kind="bad"><span class="habit-dot bad"></span>Kötü alışkanlık</button>
+      </div>
+      <label class="inline" for="habitTimed" style="color:var(--text);margin-top:12px">
+        <input id="habitTimed" type="checkbox">
+        <span>Zaman aralığı ekle</span>
+      </label>
+      <div class="row habit-time" id="habitTime" hidden>
+        <div><label for="habitStart">Başlangıç</label><input id="habitStart" type="time" value="07:00"></div>
+        <div><label for="habitEnd">Bitiş</label><input id="habitEnd" type="time" value="08:00"></div>
+      </div>
+      <button class="btn primary" id="addHabit" type="button" style="width:100%;margin-top:10px">Alışkanlık ekle</button>
+      <div class="items" id="habits"></div>
+    </section>
+    </div>
   </aside>
 
   <main>
@@ -242,22 +289,54 @@
   const SUPABASE_URL = "https://pbqwhxtmkmxzarvnsesu.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7yksSVZ_VJgG1yzbe3H-sg_IOg_u0lC";
 
-  const presets = {
-    mac: [2560,1600],
-    monitor: [2560,1440],
-    iphone: [828,1792],
-    watch: [466,466]
-  };
+  const deviceCatalog = [
+    {id:"monitor",category:"Monitör",brand:"Standart",model:'QHD / 2K 16:9',w:2560,h:1440},
+    {id:"display-fhd",category:"Monitör",brand:"Standart",model:"Full HD 16:9",w:1920,h:1080},
+    {id:"display-4k",category:"Monitör",brand:"Standart",model:"4K UHD 16:9",w:3840,h:2160},
+    {id:"mac",category:"Bilgisayar",brand:"Apple",model:'MacBook Air 13" (M1)',w:2560,h:1600},
+    {id:"mac-air-13-m4",category:"Bilgisayar",brand:"Apple",model:'MacBook Air 13" (M4)',w:2560,h:1664},
+    {id:"mac-air-15-m4",category:"Bilgisayar",brand:"Apple",model:'MacBook Air 15" (M4)',w:2880,h:1864},
+    {id:"macbook-pro-14",category:"Bilgisayar",brand:"Apple",model:'MacBook Pro 14"',w:3024,h:1964},
+    {id:"macbook-pro-16",category:"Bilgisayar",brand:"Apple",model:'MacBook Pro 16"',w:3456,h:2234},
+    {id:"iphone",category:"Telefon",brand:"Apple",model:"iPhone 11",w:828,h:1792},
+    {id:"iphone-13",category:"Telefon",brand:"Apple",model:"iPhone 13",w:1170,h:2532},
+    {id:"iphone-15-pro",category:"Telefon",brand:"Apple",model:"iPhone 15 Pro",w:1179,h:2556},
+    {id:"iphone-16",category:"Telefon",brand:"Apple",model:"iPhone 16",w:1179,h:2556},
+    {id:"iphone-16-plus",category:"Telefon",brand:"Apple",model:"iPhone 16 Plus",w:1290,h:2796},
+    {id:"iphone-16-pro",category:"Telefon",brand:"Apple",model:"iPhone 16 Pro",w:1206,h:2622},
+    {id:"iphone-16-pro-max",category:"Telefon",brand:"Apple",model:"iPhone 16 Pro Max",w:1320,h:2868},
+    {id:"galaxy-s25",category:"Telefon",brand:"Samsung",model:"Galaxy S25",w:1080,h:2340},
+    {id:"galaxy-s25-plus",category:"Telefon",brand:"Samsung",model:"Galaxy S25+",w:1440,h:3120},
+    {id:"galaxy-s25-ultra",category:"Telefon",brand:"Samsung",model:"Galaxy S25 Ultra",w:1440,h:3120},
+    {id:"galaxy-s24-ultra",category:"Telefon",brand:"Samsung",model:"Galaxy S24 Ultra",w:1440,h:3120},
+    {id:"galaxy-a55",category:"Telefon",brand:"Samsung",model:"Galaxy A55",w:1080,h:2340},
+    {id:"pixel-9",category:"Telefon",brand:"Google",model:"Pixel 9",w:1080,h:2424},
+    {id:"pixel-9-pro",category:"Telefon",brand:"Google",model:"Pixel 9 Pro",w:1280,h:2856},
+    {id:"pixel-9-pro-xl",category:"Telefon",brand:"Google",model:"Pixel 9 Pro XL",w:1344,h:2992},
+    {id:"ipad-air-11",category:"Tablet",brand:"Apple",model:'iPad Air 11"',w:1640,h:2360},
+    {id:"ipad-air-13",category:"Tablet",brand:"Apple",model:'iPad Air 13"',w:2048,h:2732},
+    {id:"ipad-pro-11",category:"Tablet",brand:"Apple",model:'iPad Pro 11"',w:1668,h:2420},
+    {id:"ipad-pro-13",category:"Tablet",brand:"Apple",model:'iPad Pro 13"',w:2064,h:2752},
+    {id:"tab-s10-plus",category:"Tablet",brand:"Samsung",model:"Galaxy Tab S10+",w:1752,h:2800},
+    {id:"tab-s10-ultra",category:"Tablet",brand:"Samsung",model:"Galaxy Tab S10 Ultra",w:1848,h:2960},
+    {id:"watch",category:"Saat",brand:"Huawei",model:"Watch GT 5 Pro",w:466,h:466},
+    {id:"apple-watch-10-42",category:"Saat",brand:"Apple",model:"Watch Series 10 42 mm",w:374,h:446},
+    {id:"apple-watch-10-46",category:"Saat",brand:"Apple",model:"Watch Series 10 46 mm",w:416,h:496},
+    {id:"apple-watch-ultra-2",category:"Saat",brand:"Apple",model:"Watch Ultra 2",w:410,h:502},
+    {id:"galaxy-watch7-40",category:"Saat",brand:"Samsung",model:"Galaxy Watch7 40 mm",w:432,h:432},
+    {id:"galaxy-watch7-44",category:"Saat",brand:"Samsung",model:"Galaxy Watch7 44 mm",w:480,h:480}
+  ];
+  const presets=Object.fromEntries(deviceCatalog.map(device=>[device.id,[device.w,device.h]]));
 
   const defaultState = {
-    device:"mac", customW:1920, customH:1080,
+    device:"custom", customW:1920, customH:1080,
     bgColor:"#10141c", textColor:"#f7f8fb",
     layoutMode:"two", showEmptySpiral:true, visibleItemLabels:{}, compositionOffset:{x:0,y:0}, compositionScale:1, labelOffsets:{}, labelLineAnchors:{}, labelTexts:{},
     rings:[
       {start:"00:00",end:"12:00"},
       {start:"12:00",end:"00:00"}
     ],
-    items:[]
+    items:[], habits:[], habitChecks:{}
   };
 
   let currentUser = null;
@@ -279,10 +358,30 @@
     }));
   }
 
+  function normalizeHabits(habits){
+    const seen=new Set();
+    const out=[];
+    for(const habit of Array.isArray(habits)?habits:[]){
+      const kind=habit?.kind==="bad" ? "bad" : "good";
+      if(seen.has(kind)) continue;
+      seen.add(kind);
+      out.push({
+        id:habit.id || makeItemId(),
+        name:String(habit.name || "").trim(),
+        kind,
+        timed:habit.timed===true,
+        start:habit.start || "07:00",
+        end:habit.end || "08:00"
+      });
+    }
+    return out;
+  }
+
   function normalizeState(saved){
     saved = saved && typeof saved==="object" ? saved : {};
     const migratedMode = saved.layoutMode ||
       (saved.viewMode==="spiral" ? "spiral" : (Number(saved.ringCount)===1 ? "one" : "two"));
+    const legacyPreset=presets[saved.device];
     return {
       ...structuredClone(defaultState),
       ...saved,
@@ -301,7 +400,11 @@
       labelLineAnchors:saved.labelLineAnchors && typeof saved.labelLineAnchors==="object" ? saved.labelLineAnchors : {},
       labelTexts:saved.labelTexts && typeof saved.labelTexts==="object" ? saved.labelTexts : {},
       rings: saved.rings?.length === 2 ? saved.rings : structuredClone(defaultState.rings),
-      items: normalizeItems(saved.items)
+      customW:legacyPreset ? legacyPreset[0] : (Number(saved.customW)||defaultState.customW),
+      customH:legacyPreset ? legacyPreset[1] : (Number(saved.customH)||defaultState.customH),
+      items: normalizeItems(saved.items),
+      habits:normalizeHabits(saved.habits),
+      habitChecks:saved.habitChecks && typeof saved.habitChecks==="object" ? saved.habitChecks : {}
     };
   }
 
@@ -315,13 +418,13 @@
   function normalizeAppData(raw){
     if(raw && typeof raw==="object" && raw.appState){
       return {
-        version:Number(raw.version)||2,
+        version:Number(raw.version)||3,
         appState:normalizeState(raw.appState),
         bgImageDataUrl:typeof raw.bgImageDataUrl==="string" ? raw.bgImageDataUrl : ""
       };
     }
     return {
-      version:2,
+      version:3,
       appState:normalizeState(raw),
       bgImageDataUrl:""
     };
@@ -340,11 +443,12 @@
   let bgImageDataUrl=initialData.bgImageDataUrl;
   let labelHitboxes=[];
   let itemHitRegions=[];
+  let habitCenterRegions=[];
   let labelDrag=null;
 
   function currentAppData(){
     return {
-      version:2,
+      version:3,
       appState:state,
       bgImageDataUrl:bgImageDataUrl || ""
     };
@@ -595,14 +699,40 @@
     return state.items.filter(it=>rings.some(r=>ringVisible(it,r,allowLong)));
   }
 
+  function todayKey(){
+    const now=new Date();
+    const y=now.getFullYear();
+    const m=String(now.getMonth()+1).padStart(2,"0");
+    const d=String(now.getDate()).padStart(2,"0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function habitDone(habit){
+    return state.habitChecks?.[todayKey()]?.[habit.id]===true;
+  }
+
+  function toggleHabitDone(habitId){
+    const key=todayKey();
+    state.habitChecks[key]=state.habitChecks[key] && typeof state.habitChecks[key]==="object"
+      ? state.habitChecks[key]
+      : {};
+    state.habitChecks[key][habitId]=!state.habitChecks[key][habitId];
+    saveState();
+    renderHabits();
+    draw();
+  }
+
+  function habitColor(habit){ return habit.kind==="bad" ? "#000000" : "#ffffff"; }
+
+  function timedHabits(){
+    return state.habits.filter(habit=>habit.timed && habit.start && habit.end && mins(habit.start)!==mins(habit.end));
+  }
+
   function getSize(){
-    if(state.device === "custom"){
-      return [
-        Math.max(200, Math.min(8192, Number(state.customW)||1920)),
-        Math.max(200, Math.min(8192, Number(state.customH)||1080))
-      ];
-    }
-    return presets[state.device] || presets.mac;
+    return [
+      Math.max(200, Math.min(8192, Number(state.customW)||1920)),
+      Math.max(200, Math.min(8192, Number(state.customH)||1080))
+    ];
   }
 
   function fitCover(img,w,h){
@@ -619,6 +749,7 @@
   function draw(){
     labelHitboxes=[];
     itemHitRegions=[];
+    habitCenterRegions=[];
     const [w,h]=getSize();
     if(canvas.width!==w || canvas.height!==h){ canvas.width=w; canvas.height=h; }
     $("canvasMeta").textContent=` · ${w}×${h}`;
@@ -672,6 +803,76 @@
     return {cx,cy,minA,maxR,two,outerIndex,innerIndex,baseStroke,gap,radii};
   }
 
+  function drawHabitCenter(cx,cy,availableRadius,minA){
+    const good=state.habits.find(habit=>habit.kind==="good");
+    const bad=state.habits.find(habit=>habit.kind==="bad");
+    if(!good && !bad) return;
+
+    const r=Math.max(12,Math.min(minA*0.115,availableRadius*0.62));
+    const outline=Math.max(1.5,minA*0.0022);
+
+    function setHighlight(habit){
+      const done=habitDone(habit);
+      ctx.globalAlpha=done ? 1 : 0.52;
+      ctx.shadowColor=habitColor(habit);
+      ctx.shadowBlur=done ? Math.max(10,r*0.32) : 0;
+      return done;
+    }
+
+    ctx.save();
+    if(good && bad){
+      ctx.fillStyle="#000000";
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+
+      ctx.fillStyle="#ffffff";
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,-Math.PI/2,Math.PI/2,false);
+      ctx.arc(cx,cy+r/2,r/2,Math.PI/2,-Math.PI/2,false);
+      ctx.arc(cx,cy-r/2,r/2,Math.PI/2,-Math.PI/2,true);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle="#ffffff";
+      ctx.beginPath(); ctx.arc(cx,cy-r/2,r*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#000000";
+      ctx.beginPath(); ctx.arc(cx,cy+r/2,r*0.12,0,Math.PI*2); ctx.fill();
+
+      ctx.lineWidth=outline;
+      ctx.strokeStyle=rgba(state.textColor,0.48);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+
+      if(habitDone(good)){
+        ctx.globalAlpha=1;
+        ctx.strokeStyle="#ffffff";
+        ctx.shadowColor="#ffffff";
+        ctx.shadowBlur=Math.max(10,r*0.3);
+        ctx.lineWidth=outline*2.2;
+        ctx.beginPath(); ctx.arc(cx,cy,r+outline*2,-Math.PI/2,Math.PI/2); ctx.stroke();
+      }
+      if(habitDone(bad)){
+        ctx.globalAlpha=1;
+        ctx.strokeStyle="#000000";
+        ctx.shadowColor="#ffffff";
+        ctx.shadowBlur=Math.max(8,r*0.22);
+        ctx.lineWidth=outline*2.2;
+        ctx.beginPath(); ctx.arc(cx,cy,r+outline*2,Math.PI/2,Math.PI*1.5); ctx.stroke();
+      }
+      habitCenterRegions.push({cx,cy,r,goodId:good.id,badId:bad.id});
+    }else{
+      const habit=good || bad;
+      setHighlight(habit);
+      ctx.fillStyle=habitColor(habit);
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.globalAlpha=1;
+      ctx.lineWidth=outline;
+      ctx.strokeStyle=habit.kind==="bad" ? rgba(state.textColor,0.55) : "rgba(0,0,0,.45)";
+      ctx.stroke();
+      habitCenterRegions.push({cx,cy,r,habitId:habit.id});
+    }
+    ctx.restore();
+  }
+
   function clockAngle(absMinute){
     const m=((absMinute%720)+720)%720;
     return -Math.PI/2 + (m/720)*Math.PI*2;
@@ -692,6 +893,8 @@
       const isInner=two && i===innerIndex;
       drawOneRing(state.rings[i],radii[i],baseStroke,cx,cy,minA,isInner);
     }
+    const centerRadius=(two ? radii[innerIndex] : radii[0])-baseStroke/2;
+    drawHabitCenter(cx,cy,Math.max(baseStroke,centerRadius),minA);
   }
 
   function drawOneRing(ring,radius,stroke,cx,cy,minA,isInner=false){
@@ -716,9 +919,30 @@
         drawArcByTime(cx,cy,radius,ov.a,ov.b-ov.a);
         ctx.stroke();
         itemHitRegions.push({
-          type:"ring",itemId:item.id,cx,cy,radius,stroke,startAbs:ov.a,duration:ov.b-ov.a
+          type:"ring",targetType:"item",targetId:item.id,cx,cy,radius,stroke,startAbs:ov.a,duration:ov.b-ov.a
         });
       }
+    }
+
+    for(const habit of timedHabits()){
+      const overlaps=overlapsForRing(habit,ring,false);
+      if(!overlaps.length) continue;
+      const color=habitColor(habit);
+      const done=habitDone(habit);
+      ctx.save();
+      ctx.strokeStyle=rgba(color,done?1:0.58);
+      ctx.lineWidth=stroke;
+      ctx.shadowColor=color;
+      ctx.shadowBlur=done ? Math.max(8,stroke*0.38) : 0;
+      for(const ov of overlaps){
+        ctx.beginPath();
+        drawArcByTime(cx,cy,radius,ov.a,ov.b-ov.a);
+        ctx.stroke();
+        itemHitRegions.push({
+          type:"ring",targetType:"habit",targetId:habit.id,cx,cy,radius,stroke,startAbs:ov.a,duration:ov.b-ov.a
+        });
+      }
+      ctx.restore();
     }
 
     drawTicks(ring,radius,stroke,cx,cy,minA,rd,isInner);
@@ -947,7 +1171,25 @@
         const visualE2=Math.max(0,Math.min(rd,e2+spiralItemVisualOffset));
         if(visualE2<=visualE1) continue;
         const shape=drawShapedSegment(visualE1,visualE2,item.color);
-        if(shape) itemHitRegions.push({type:"spiral",itemId:item.id,...shape});
+        if(shape) itemHitRegions.push({type:"spiral",targetType:"item",targetId:item.id,...shape});
+      }
+    }
+
+    for(const habit of timedHabits()){
+      const overlaps=overlapsForRing(habit,ring,true);
+      const color=habitColor(habit);
+      const done=habitDone(habit);
+      for(const ov of overlaps){
+        let e1=Math.max(0,Math.min(rd,ov.a-ov.ringA));
+        let e2=Math.max(0,Math.min(rd,ov.b-ov.ringA));
+        if(e2<=e1) continue;
+        ctx.save();
+        ctx.globalAlpha=done ? 1 : 0.58;
+        ctx.shadowColor=color;
+        ctx.shadowBlur=done ? Math.max(8,stroke*0.38) : 0;
+        const shape=drawShapedSegment(e1,e2,color);
+        ctx.restore();
+        if(shape) itemHitRegions.push({type:"spiral",targetType:"habit",targetId:habit.id,...shape});
       }
     }
 
@@ -1327,6 +1569,7 @@
     }
 
     drawSpiralLabels();
+    drawHabitCenter(cx,cy,Math.max(stroke,innerR-stroke/2),minA);
     ctx.restore();
   }
 
@@ -1398,21 +1641,144 @@
     });
   }
 
+  function renderHabits(){
+    const wrap=$("habits");
+    wrap.innerHTML="";
+    if(!state.habits.length){
+      const p=document.createElement("div");
+      p.className="empty";
+      p.textContent="Henüz aktif alışkanlık yok.";
+      wrap.appendChild(p);
+      return;
+    }
+    state.habits.forEach((habit,index)=>{
+      const done=habitDone(habit);
+      const card=document.createElement("div");
+      card.className="item-card";
+      card.innerHTML=`
+        <div class="item-grid">
+          <div class="habit-dot ${habit.kind}" style="width:30px;height:30px"></div>
+          <div style="min-width:0">
+            <div class="item-title">${escapeHtml(habit.name || "İsimsiz")}</div>
+            <div class="habit-kind-badge">${habit.kind==="good" ? "İyi alışkanlık" : "Kötü alışkanlık"}</div>
+            <div class="habit-status">${habit.timed ? `${escapeHtml(habit.start)}–${escapeHtml(habit.end)} · ` : ""}${done ? "Bugün tamamlandı" : "Bugün bekliyor"}</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+            <button class="btn small" type="button" data-habit-check="${index}">${done ? "Geri al" : "Tamamla"}</button>
+            <button class="btn small" type="button" data-habit-edit="${index}">Düzenle</button>
+            <button class="btn small danger" type="button" data-habit-del="${index}">Sil</button>
+          </div>
+        </div>`;
+      wrap.appendChild(card);
+    });
+    wrap.querySelectorAll("[data-habit-check]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const habit=state.habits[Number(button.dataset.habitCheck)];
+        if(habit) toggleHabitDone(habit.id);
+      });
+    });
+    wrap.querySelectorAll("[data-habit-edit]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const index=Number(button.dataset.habitEdit);
+        const habit=state.habits[index];
+        if(!habit) return;
+        $("habitName").value=habit.name;
+        setHabitKind(habit.kind);
+        $("habitTimed").checked=habit.timed;
+        $("habitTime").hidden=!habit.timed;
+        $("habitStart").value=habit.start;
+        $("habitEnd").value=habit.end;
+        $("addHabit").textContent="Değişiklikleri kaydet";
+        $("addHabit").dataset.editing=String(index);
+        $("habitName").focus();
+      });
+    });
+    wrap.querySelectorAll("[data-habit-del]").forEach(button=>{
+      button.addEventListener("click",()=>{
+        const index=Number(button.dataset.habitDel);
+        const removed=state.habits[index];
+        state.habits.splice(index,1);
+        if(removed){
+          for(const day of Object.values(state.habitChecks)){
+            if(day && typeof day==="object") delete day[removed.id];
+          }
+        }
+        clearHabitForm();
+        saveState();
+        renderHabits();
+        draw();
+      });
+    });
+  }
+
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
   }
 
-  function updateCustomSizeVisibility(){
-    const custom = state.device === "custom";
-    $("customSize").hidden = !custom;
-    $("customW").disabled = !custom;
-    $("customH").disabled = !custom;
+  function setSidebarPanel(name){
+    const design=name==="design";
+    $("designPanel").hidden=!design;
+    $("contentPanel").hidden=design;
+    $("designTab").classList.toggle("active",design);
+    $("contentTab").classList.toggle("active",!design);
+    $("designTab").setAttribute("aria-selected",String(design));
+    $("contentTab").setAttribute("aria-selected",String(!design));
+  }
+
+  function setOptions(select,values,allLabel){
+    const previous=select.value;
+    select.innerHTML="";
+    if(allLabel){
+      const option=document.createElement("option");
+      option.value=""; option.textContent=allLabel;
+      select.appendChild(option);
+    }
+    values.forEach(value=>{
+      const option=document.createElement("option");
+      option.value=value; option.textContent=value;
+      select.appendChild(option);
+    });
+    if([...select.options].some(option=>option.value===previous)) select.value=previous;
+  }
+
+  function filteredDevices(){
+    const category=$("deviceCategory").value;
+    const brand=$("deviceBrand").value;
+    const query=$("deviceSearch").value.trim().toLocaleLowerCase("tr");
+    return deviceCatalog.filter(device=>
+      (!category || device.category===category) &&
+      (!brand || device.brand===brand) &&
+      (!query || `${device.category} ${device.brand} ${device.model}`.toLocaleLowerCase("tr").includes(query))
+    );
+  }
+
+  function renderDeviceFinder({refreshCategories=false}={}){
+    if(refreshCategories || !$("deviceCategory").options.length){
+      setOptions($("deviceCategory"),[...new Set(deviceCatalog.map(device=>device.category))],"Tüm kategoriler");
+    }
+    const category=$("deviceCategory").value;
+    const brands=[...new Set(deviceCatalog.filter(device=>!category || device.category===category).map(device=>device.brand))];
+    setOptions($("deviceBrand"),brands,"Tüm markalar");
+    const devices=filteredDevices();
+    const previous=$("deviceModel").value;
+    $("deviceModel").innerHTML='<option value="">Model seç</option>';
+    devices.forEach(device=>{
+      const option=document.createElement("option");
+      option.value=device.id;
+      option.textContent=`${device.brand} ${device.model} — ${device.w}×${device.h}`;
+      $("deviceModel").appendChild(option);
+    });
+    if(devices.some(device=>device.id===previous)) $("deviceModel").value=previous;
+    else if(devices.some(device=>device.id===state.device)) $("deviceModel").value=state.device;
+    const selected=deviceCatalog.find(device=>device.id===state.device);
+    $("deviceResult").textContent=selected
+      ? `${selected.brand} ${selected.model} · ${selected.w}×${selected.h}`
+      : `Özel boyut · ${state.customW}×${state.customH}`;
   }
 
   function syncUI(){
-    $("device").value=state.device;
     $("customW").value=state.customW; $("customH").value=state.customH;
-    updateCustomSizeVisibility();
+    renderDeviceFinder({refreshCategories:true});
     $("bgColor").value=state.bgColor;
     $("textColor").value=state.textColor;
     $("layoutMode").value=state.layoutMode || "two";
@@ -1427,6 +1793,7 @@
     });
     updateRoles();
     renderItems();
+    renderHabits();
     draw();
   }
 
@@ -1450,13 +1817,47 @@
     saveState(); updateRoles(); draw();
   }
 
-  $("device").addEventListener("change",e=>{
-    state.device=e.target.value;
-    updateCustomSizeVisibility();
+  $("designTab").addEventListener("click",()=>setSidebarPanel("design"));
+  $("contentTab").addEventListener("click",()=>setSidebarPanel("content"));
+  $("deviceFinderToggle").addEventListener("click",()=>{
+    $("deviceFinder").hidden=!$("deviceFinder").hidden;
+    $("deviceFinderToggle").textContent=$("deviceFinder").hidden ? "Cihaz kataloğundan seç" : "Cihaz kataloğunu kapat";
+  });
+  $("deviceCategory").addEventListener("change",()=>{
+    $("deviceBrand").value="";
+    renderDeviceFinder();
+  });
+  $("deviceBrand").addEventListener("change",()=>renderDeviceFinder());
+  $("deviceSearch").addEventListener("input",e=>{
+    if(e.target.value.trim()){
+      $("deviceCategory").value="";
+      $("deviceBrand").value="";
+    }
+    renderDeviceFinder();
+  });
+  $("deviceModel").addEventListener("change",e=>{
+    const device=deviceCatalog.find(candidate=>candidate.id===e.target.value);
+    if(!device) return;
+    state.device=device.id;
+    state.customW=device.w;
+    state.customH=device.h;
+    $("customW").value=device.w;
+    $("customH").value=device.h;
+    $("deviceResult").textContent=`${device.brand} ${device.model} · ${device.w}×${device.h}`;
     persistAndDraw();
   });
-  $("customW").addEventListener("input",e=>{ state.customW=Number(e.target.value)||1920; persistAndDraw(); });
-  $("customH").addEventListener("input",e=>{ state.customH=Number(e.target.value)||1080; persistAndDraw(); });
+  $("customW").addEventListener("input",e=>{
+    state.device="custom";
+    state.customW=Number(e.target.value)||1920;
+    renderDeviceFinder();
+    persistAndDraw();
+  });
+  $("customH").addEventListener("input",e=>{
+    state.device="custom";
+    state.customH=Number(e.target.value)||1080;
+    renderDeviceFinder();
+    persistAndDraw();
+  });
   $("bgColor").addEventListener("input",e=>{ state.bgColor=e.target.value; persistAndDraw(); });
   $("textColor").addEventListener("input",e=>{ state.textColor=e.target.value; persistAndDraw(); });
   $("layoutMode").addEventListener("change",e=>{
@@ -1530,6 +1931,57 @@
   $("itemLabel").addEventListener("input",()=>{ $("itemLabel").dataset.manual="1"; });
   $("itemName").addEventListener("keydown",e=>{ if(e.key==="Enter") $("addItem").click(); });
 
+  function setHabitKind(kind){
+    const normalized=kind==="bad" ? "bad" : "good";
+    $("addHabit").dataset.kind=normalized;
+    $("habitGood").classList.toggle("active",normalized==="good");
+    $("habitBad").classList.toggle("active",normalized==="bad");
+  }
+
+  function clearHabitForm(){
+    $("habitName").value="";
+    $("habitTimed").checked=false;
+    $("habitTime").hidden=true;
+    $("addHabit").textContent="Alışkanlık ekle";
+    delete $("addHabit").dataset.editing;
+    setHabitKind("good");
+  }
+
+  $("habitGood").addEventListener("click",()=>setHabitKind("good"));
+  $("habitBad").addEventListener("click",()=>setHabitKind("bad"));
+  $("habitTimed").addEventListener("change",e=>{ $("habitTime").hidden=!e.target.checked; });
+  $("addHabit").addEventListener("click",()=>{
+    const name=$("habitName").value.trim();
+    const kind=$("addHabit").dataset.kind==="bad" ? "bad" : "good";
+    const timed=$("habitTimed").checked;
+    const start=$("habitStart").value;
+    const end=$("habitEnd").value;
+    if(!name){ $("habitName").focus(); return; }
+    if(timed && (!start || !end || mins(start)===mins(end))){
+      alert("Zamanlı alışkanlıkta başlangıç ve bitiş saati farklı olmalı.");
+      return;
+    }
+
+    const editing=$("addHabit").dataset.editing;
+    const editingIndex=editing===undefined ? -1 : Number(editing);
+    const conflict=state.habits.findIndex((habit,index)=>habit.kind===kind && index!==editingIndex);
+    if(conflict!==-1){
+      alert(kind==="good" ? "Zaten aktif bir iyi alışkanlık var." : "Zaten aktif bir kötü alışkanlık var.");
+      return;
+    }
+
+    if(editingIndex>=0 && state.habits[editingIndex]){
+      state.habits[editingIndex]={...state.habits[editingIndex],name,kind,timed,start,end};
+    }else{
+      state.habits.push({id:makeItemId(),name,kind,timed,start,end});
+    }
+    clearHabitForm();
+    saveState();
+    renderHabits();
+    draw();
+  });
+  $("habitName").addEventListener("keydown",e=>{ if(e.key==="Enter") $("addHabit").click(); });
+
   $("bgImage").addEventListener("change",e=>{
     const file=e.target.files?.[0];
     if(!file) return;
@@ -1577,6 +2029,17 @@
   }
 
   function itemAtPoint(p){
+    for(let i=habitCenterRegions.length-1;i>=0;i--){
+      const region=habitCenterRegions[i];
+      const dx=p.x-region.cx, dy=p.y-region.cy;
+      if(Math.hypot(dx,dy)>region.r+6) continue;
+      if(region.habitId) return {type:"habit",id:region.habitId};
+      const topDistance=Math.hypot(dx,dy+region.r/2);
+      const bottomDistance=Math.hypot(dx,dy-region.r/2);
+      if(topDistance<=region.r/2) return {type:"habit",id:region.badId};
+      if(bottomDistance<=region.r/2) return {type:"habit",id:region.goodId};
+      return {type:"habit",id:dx>=0 ? region.goodId : region.badId};
+    }
     for(let i=itemHitRegions.length-1;i>=0;i--){
       const region=itemHitRegions[i];
       if(region.type==="ring"){
@@ -1585,11 +2048,13 @@
         const angle=Math.atan2(dy,dx);
         const start=clockAngle(region.startAbs);
         const elapsed=(((angle-start)%(Math.PI*2)+Math.PI*2)%(Math.PI*2))*720/(Math.PI*2);
-        if(elapsed<=region.duration+0.001) return region.itemId;
+        if(elapsed<=region.duration+0.001) return {type:region.targetType,id:region.targetId};
       }else{
         const limit=(region.half+6)**2;
         for(let j=1;j<region.points.length;j++){
-          if(pointToSegmentDistanceSquared(p,region.points[j-1],region.points[j])<=limit) return region.itemId;
+          if(pointToSegmentDistanceSquared(p,region.points[j-1],region.points[j])<=limit){
+            return {type:region.targetType,id:region.targetId};
+          }
         }
       }
     }
@@ -1643,11 +2108,14 @@
       };
       canvas.style.cursor="grabbing";
     }else{
-      const itemId=itemAtPoint(p);
-      if(itemId){
-        state.visibleItemLabels[itemId]=!state.visibleItemLabels[itemId];
-        saveState();
-        draw();
+      const target=itemAtPoint(p);
+      if(target){
+        if(target.type==="habit") toggleHabitDone(target.id);
+        else{
+          state.visibleItemLabels[target.id]=!state.visibleItemLabels[target.id];
+          saveState();
+          draw();
+        }
         canvas.style.cursor="pointer";
         e.preventDefault();
         return;
