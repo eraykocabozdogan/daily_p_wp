@@ -344,6 +344,7 @@
   let authReady = false;
   let cloudSyncTimer = null;
   let cloudSyncBusy = false;
+  let cloudSyncPromise = null;
   let pendingCloudSync = false;
   let ignoreCloudSync = false;
 
@@ -532,28 +533,45 @@
     setAuthStatus("Değişiklikler eşitleniyor…","busy");
   }
 
-  async function flushCloudSync(){
-    if(!currentUser || !authReady || !supa || cloudSyncBusy || !pendingCloudSync) return;
+  function flushCloudSync(){
+    if(cloudSyncBusy) return cloudSyncPromise || Promise.resolve();
+    if(!currentUser || !authReady || !supa || !pendingCloudSync) return Promise.resolve();
     cloudSyncBusy=true;
-    pendingCloudSync=false;
     clearTimeout(cloudSyncTimer);
-    try{
-      const payload=currentAppData();
-      const {error}=await supa.from("user_app_state").upsert({
-        user_id:currentUser.id,
-        state:payload,
-        updated_at:new Date().toISOString()
-      },{onConflict:"user_id"});
-      if(error) throw error;
-      setAuthStatus("Google hesabıyla eşitlendi","ok");
-    }catch(err){
-      pendingCloudSync=true;
-      console.error("Cloud sync failed:",err);
-      setAuthStatus("Senkron bekliyor; bağlantı gelince tekrar denenecek.","err");
-    }finally{
+    cloudSyncTimer=null;
+    cloudSyncPromise=(async()=>{
+      try{
+        // A write can finish while another UI change is being queued. Keep
+        // draining the latest snapshot so the final change cannot be stranded.
+        while(currentUser && authReady && supa && pendingCloudSync){
+          pendingCloudSync=false;
+          const payload=structuredClone(currentAppData());
+          const {error}=await supa.from("user_app_state").upsert({
+            user_id:currentUser.id,
+            state:payload,
+            updated_at:new Date().toISOString()
+          },{onConflict:"user_id"});
+          if(error) throw error;
+        }
+        if(!pendingCloudSync) setAuthStatus("Google hesabıyla eşitlendi","ok");
+      }catch(err){
+        pendingCloudSync=true;
+        console.error("Cloud sync failed:",err);
+        setAuthStatus("Senkron bekliyor; bağlantı gelince tekrar denenecek.","err");
+      }
+    })().finally(()=>{
       cloudSyncBusy=false;
-    }
+      cloudSyncPromise=null;
+    });
+    return cloudSyncPromise;
   }
+
+  document.addEventListener("visibilitychange",()=>{
+    if(document.visibilityState==="hidden" && pendingCloudSync) flushCloudSync();
+  });
+  window.addEventListener("pagehide",()=>{
+    if(pendingCloudSync) flushCloudSync();
+  });
 
   async function activateUser(user){
     if(!user || !supa) return;
