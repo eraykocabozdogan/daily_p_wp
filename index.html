@@ -612,16 +612,6 @@
     return ((h||0)*60 + (m||0)) % 1440;
   }
 
-  function clock(minute, format){
-    const m = ((Math.round(minute)%1440)+1440)%1440;
-    const h = Math.floor(m/60), mm = m%60;
-    if(format === "12"){
-      const hh = h%12 || 12;
-      return mm ? `${hh}:${String(mm).padStart(2,"0")}` : String(hh);
-    }
-    return mm ? `${String(h).padStart(2,"0")}:${String(mm).padStart(2,"0")}` : String(h).padStart(2,"0");
-  }
-
   function duration(start,end,fullIfEqual=true){
     const s=mins(start), e=mins(end);
     const d=(e-s+1440)%1440;
@@ -958,7 +948,7 @@
 
     for(let t=first;t<=end+0.001;t+=step){
       // 12 saatlik yüzeyde başlangıç ve bitiş aynı fiziksel noktaya düşer.
-      // Başlangıç etiketi zaten varsa, bitişteki kopyayı çizme.
+      // Başlangıç işareti zaten varsa, bitişteki kopyayı çizme.
       const duplicatesStart =
         rd>=720-0.001 &&
         Math.abs(t-end)<0.001 &&
@@ -975,36 +965,26 @@
     const clearGap=Math.max(5,stroke*0.22);
     const tickLen=Math.max(6,stroke*0.34);
     const minorTickLen=Math.max(4,tickLen*0.58);
-    const labelGap=Math.max(8,stroke*0.42);
-    const fontSize=Math.max(8,Math.min(24,minA*0.017));
     const bandEdge=isInner ? radius-stroke/2 : radius+stroke/2;
 
     ctx.lineWidth=Math.max(1,minA*0.0013);
-    ctx.fillStyle=rgba(state.textColor,0.78);
-    ctx.font=`500 ${fontSize}px Inter,system-ui,sans-serif`;
-    ctx.textAlign="center";
-    ctx.textBaseline="middle";
 
     moments.forEach(t=>{
       const isMajor=((t%180)+180)%180<0.001;
       const currentTickLen=isMajor ? tickLen : minorTickLen;
       const a=clockAngle(t);
-      let r1,r2,lr;
+      let r1,r2;
       if(isInner){
-        r1=bandEdge-clearGap; r2=r1-currentTickLen; lr=r1-tickLen-labelGap-fontSize*0.35;
+        r1=bandEdge-clearGap; r2=r1-currentTickLen;
       }else{
-        r1=bandEdge+clearGap; r2=r1+currentTickLen; lr=r1+tickLen+labelGap+fontSize*0.35;
+        r1=bandEdge+clearGap; r2=r1+currentTickLen;
       }
 
-      ctx.strokeStyle=rgba(state.textColor,isMajor?0.52:0.32);
+      ctx.strokeStyle=rgba(state.textColor,isMajor?0.60:0.40);
       ctx.beginPath();
       ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
       ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
       ctx.stroke();
-
-      if(isMajor && lr>fontSize){
-        ctx.fillText(clock(t,"24"),cx+Math.cos(a)*lr,cy+Math.sin(a)*lr);
-      }
     });
   }
 
@@ -1491,51 +1471,32 @@
       const step=60;
       const first=Math.ceil(rs/step)*step;
       const end=rs+rd;
-      const fontSize=Math.max(8,Math.min(24,minA*0.017));
       const clearGap=Math.max(5,stroke*0.22);
       const tickLen=Math.max(6,stroke*0.34);
       const minorTickLen=Math.max(4,tickLen*0.58);
-      const labelGap=Math.max(8,stroke*0.42);
 
       ctx.lineWidth=Math.max(1,minA*0.0013);
-      ctx.fillStyle=rgba(state.textColor,0.78);
-      ctx.font=`500 ${fontSize}px Inter,system-ui,sans-serif`;
-      ctx.textAlign="center";
-      ctx.textBaseline="middle";
 
-      let lastShownAngle=null;
       for(let t=first;t<=end+0.001;t+=step){
         const elapsed=t-rs;
         const p=pointForElapsed(elapsed);
         const isMajor=((t%180)+180)%180<0.001;
         const currentTickLen=isMajor ? tickLen : minorTickLen;
 
-        // Aynı saatin daha dıştaki turda karşılığı varsa,
-        // iç turdaki saat çizgisi ve yazısını hiç gösterme.
-        const hasOuterCoil=elapsed+720<=rd+0.001;
-        if(hasOuterCoil) continue;
+        const outerR1=p.r+stroke/2+clearGap;
+        const outerR2=outerR1+currentTickLen;
+        const innerR1=p.r-stroke/2-clearGap;
+        const innerR2=innerR1-currentTickLen;
 
-        // Aynı fiziksel açıya düşen son etiket kopyasını engelle.
-        const normalizedAngle=((p.a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);
-        if(lastShownAngle!==null){
-          const diff=Math.abs(normalizedAngle-lastShownAngle);
-          if(diff<0.0001 || Math.abs(diff-Math.PI*2)<0.0001) continue;
-        }
-        lastShownAngle=normalizedAngle;
-
-        const r1=p.r+stroke/2+clearGap;
-        const r2=r1+currentTickLen;
-        const lr=r1+tickLen+labelGap+fontSize*0.35;
-
-        ctx.strokeStyle=rgba(state.textColor,isMajor?0.52:0.32);
+        ctx.strokeStyle=rgba(state.textColor,isMajor?0.60:0.40);
         ctx.beginPath();
-        ctx.moveTo(cx+Math.cos(p.a)*r1,cy+Math.sin(p.a)*r1);
-        ctx.lineTo(cx+Math.cos(p.a)*r2,cy+Math.sin(p.a)*r2);
-        ctx.stroke();
-
-        if(isMajor && lr>fontSize){
-          ctx.fillText(clock(t,"24"),cx+Math.cos(p.a)*lr,cy+Math.sin(p.a)*lr);
+        ctx.moveTo(cx+Math.cos(p.a)*outerR1,cy+Math.sin(p.a)*outerR1);
+        ctx.lineTo(cx+Math.cos(p.a)*outerR2,cy+Math.sin(p.a)*outerR2);
+        if(innerR2>0){
+          ctx.moveTo(cx+Math.cos(p.a)*innerR1,cy+Math.sin(p.a)*innerR1);
+          ctx.lineTo(cx+Math.cos(p.a)*innerR2,cy+Math.sin(p.a)*innerR2);
         }
+        ctx.stroke();
       }
     }
 
@@ -2213,8 +2174,16 @@
   });
 
   if("serviceWorker" in navigator && /^https?:$/.test(location.protocol)){
+    const hadServiceWorkerController=Boolean(navigator.serviceWorker.controller);
+    let reloadingForServiceWorkerUpdate=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(!hadServiceWorkerController || reloadingForServiceWorkerUpdate) return;
+      reloadingForServiceWorkerUpdate=true;
+      location.reload();
+    });
+
     window.addEventListener("load",()=>{
-      navigator.serviceWorker.register("./sw.js",{updateViaCache:"none"})
+      navigator.serviceWorker.register("./sw.js?v=11",{updateViaCache:"none"})
         .then(registration=>registration.update())
         .catch(err=>console.warn("SW:",err));
     });
