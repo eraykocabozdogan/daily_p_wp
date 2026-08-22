@@ -3,6 +3,9 @@ Plan Wallpaper PWA
 Hazır:
 - Google giriş arayüzü
 - Misafir kullanım
+- Tek plan öğesinde birden fazla zaman aralığı
+- Plan içinde benzersiz öğe isimleri
+- İsimli tekli ve yin-yang alışkanlık sembolleri
 - Supabase user_app_state senkronu
 - RLS ile kullanıcı bazlı veri ayrımı
 - PWA manifest + service worker

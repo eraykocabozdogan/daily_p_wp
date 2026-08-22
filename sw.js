@@ -1,4 +1,4 @@
-const APP_VERSION="v11";
+const APP_VERSION="v12";
 const CACHE_NAME=`plan-wallpaper-${APP_VERSION}`;
 const APP_SHELL=[
   "./",

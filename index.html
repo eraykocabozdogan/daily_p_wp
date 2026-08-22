@@ -39,6 +39,9 @@
   input[type="file"]{width:100%;font-size:12px;color:var(--muted)}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .row3{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}
+  .item-intervals{display:grid;gap:8px;margin-top:8px}
+  .item-interval-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end}
+  .item-interval-row label{margin-top:0}
   .inline{display:flex;align-items:center;gap:10px}
   .grow{flex:1}
   .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;padding:9px 12px}
@@ -229,6 +232,8 @@
         <div><label for="itemStart">Başlangıç</label><input id="itemStart" type="time" value="09:00"></div>
         <div><label for="itemEnd">Bitiş</label><input id="itemEnd" type="time" value="11:00"></div>
       </div>
+      <div class="item-intervals" id="itemIntervals"></div>
+      <button class="btn small" id="addItemInterval" type="button" style="width:100%;margin-top:8px">+ Zaman aralığı ekle</button>
       <button class="btn primary" id="addItem" type="button" style="width:100%;margin-top:10px">Öğe ekle</button>
       <div class="items" id="items"></div>
     </section>
@@ -347,11 +352,28 @@
     return `item-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
   }
 
+  function normalizeItemIntervals(item){
+    const source=Array.isArray(item?.intervals) && item.intervals.length
+      ? item.intervals
+      : [{start:item?.start,end:item?.end}];
+    return source
+      .map(interval=>({start:String(interval?.start || ""),end:String(interval?.end || "")}))
+      .filter(interval=>interval.start && interval.end && mins(interval.start)!==mins(interval.end));
+  }
+
   function normalizeItems(items){
-    return (Array.isArray(items)?items:[]).map(it=>({
-      ...it,
-      id:it.id || makeItemId()
-    }));
+    return (Array.isArray(items)?items:[]).map(it=>{
+      const intervals=normalizeItemIntervals(it);
+      const first=intervals[0] || {start:"",end:""};
+      return {
+        ...it,
+        id:it.id || makeItemId(),
+        intervals,
+        // Geçiş sürecindeki eski istemciler ilk aralığı okumaya devam edebilir.
+        start:first.start,
+        end:first.end
+      };
+    });
   }
 
   function normalizeHabits(habits){
@@ -407,13 +429,13 @@
   function normalizeAppData(raw){
     if(raw && typeof raw==="object" && raw.appState){
       return {
-        version:Number(raw.version)||3,
+        version:Number(raw.version)||4,
         appState:normalizeState(raw.appState),
         bgImageDataUrl:typeof raw.bgImageDataUrl==="string" ? raw.bgImageDataUrl : ""
       };
     }
     return {
-      version:3,
+      version:4,
       appState:normalizeState(raw),
       bgImageDataUrl:""
     };
@@ -449,7 +471,7 @@
 
   function currentAppData(){
     return {
-      version:3,
+      version:4,
       appState:state,
       bgImageDataUrl:bgImageDataUrl || ""
     };
@@ -618,8 +640,6 @@
     return d===0 && fullIfEqual ? 1440 : d;
   }
 
-  function itemDuration(item){ return duration(item.start,item.end,false); }
-
   function windowDuration(ring,allowLong=false){
     const d=duration(ring.start,ring.end,true);
     return allowLong ? d : Math.min(d,720);
@@ -627,17 +647,19 @@
 
   function overlapsForRing(item,ring,allowLong=false){
     const rd=windowDuration(ring,allowLong);
-    const id=itemDuration(item);
-    if(id<=0) return [];
     const rs=mins(ring.start);
-    const itemA=mins(item.start), itemB=itemA+id;
     const out=[];
-    for(let k=-1;k<=1;k++){
-      const ringA=rs+k*1440;
-      const ringB=ringA+rd;
-      const a=Math.max(itemA,ringA);
-      const b=Math.min(itemB,ringB);
-      if(b>a+0.001) out.push({a,b,ringA,rd});
+    for(const interval of normalizeItemIntervals(item)){
+      const intervalDuration=duration(interval.start,interval.end,false);
+      if(intervalDuration<=0) continue;
+      const itemA=mins(interval.start), itemB=itemA+intervalDuration;
+      for(let k=-1;k<=1;k++){
+        const ringA=rs+k*1440;
+        const ringB=ringA+rd;
+        const a=Math.max(itemA,ringA);
+        const b=Math.min(itemB,ringB);
+        if(b>a+0.001) out.push({a,b,ringA,rd});
+      }
     }
     return out;
   }
@@ -760,6 +782,47 @@
     return {cx,cy,minA,maxR,two,outerIndex,innerIndex,baseStroke,gap,radii};
   }
 
+  function drawTextInCircle(text,cx,cy,r,color,{maxLines=4}={}){
+    const words=String(text || "").trim().split(/\s+/).filter(Boolean);
+    if(!words.length) return;
+
+    const maxWidth=r*1.72;
+    let fontSize=Math.max(6,r*0.52);
+    let lines=[];
+    let lineHeight=fontSize*1.08;
+
+    while(fontSize>=6){
+      ctx.font=`650 ${fontSize}px Inter,system-ui,sans-serif`;
+      lines=[];
+      let line="";
+      for(const word of words){
+        const candidate=line ? `${line} ${word}` : word;
+        if(line && ctx.measureText(candidate).width>maxWidth){
+          lines.push(line);
+          line=word;
+        }else{
+          line=candidate;
+        }
+      }
+      if(line) lines.push(line);
+      lineHeight=fontSize*1.08;
+      const widest=Math.max(...lines.map(value=>ctx.measureText(value).width));
+      if(lines.length<=maxLines && widest<=maxWidth && lines.length*lineHeight<=r*1.55) break;
+      fontSize-=1;
+    }
+
+    ctx.save();
+    ctx.fillStyle=color;
+    ctx.font=`650 ${fontSize}px Inter,system-ui,sans-serif`;
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+    lines.forEach((line,index)=>{
+      const y=cy+(index-(lines.length-1)/2)*lineHeight;
+      ctx.fillText(line,cx,y,maxWidth);
+    });
+    ctx.restore();
+  }
+
   function drawHabitCenter(cx,cy,availableRadius,minA){
     const good=state.habits.find(habit=>habit.kind==="good");
     const bad=state.habits.find(habit=>habit.kind==="bad");
@@ -767,14 +830,6 @@
 
     const r=Math.max(12,Math.min(minA*0.115,availableRadius*0.62));
     const outline=Math.max(1.5,minA*0.0022);
-
-    function setHighlight(habit){
-      const done=habitDone(habit);
-      ctx.globalAlpha=done ? 1 : 0.52;
-      ctx.shadowColor=habitColor(habit);
-      ctx.shadowBlur=done ? Math.max(10,r*0.32) : 0;
-      return done;
-    }
 
     ctx.save();
     if(good && bad){
@@ -789,42 +844,21 @@
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle="#ffffff";
-      ctx.beginPath(); ctx.arc(cx,cy-r/2,r*0.12,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle="#000000";
-      ctx.beginPath(); ctx.arc(cx,cy+r/2,r*0.12,0,Math.PI*2); ctx.fill();
-
       ctx.lineWidth=outline;
       ctx.strokeStyle=rgba(state.textColor,0.48);
       ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
 
-      if(habitDone(good)){
-        ctx.globalAlpha=1;
-        ctx.strokeStyle="#ffffff";
-        ctx.shadowColor="#ffffff";
-        ctx.shadowBlur=Math.max(10,r*0.3);
-        ctx.lineWidth=outline*2.2;
-        ctx.beginPath(); ctx.arc(cx,cy,r+outline*2,-Math.PI/2,Math.PI/2); ctx.stroke();
-      }
-      if(habitDone(bad)){
-        ctx.globalAlpha=1;
-        ctx.strokeStyle="#000000";
-        ctx.shadowColor="#ffffff";
-        ctx.shadowBlur=Math.max(8,r*0.22);
-        ctx.lineWidth=outline*2.2;
-        ctx.beginPath(); ctx.arc(cx,cy,r+outline*2,Math.PI/2,Math.PI*1.5); ctx.stroke();
-      }
+      drawTextInCircle(bad.name,cx,cy-r/2,r*0.34,"#ffffff",{maxLines:3});
+      drawTextInCircle(good.name,cx,cy+r/2,r*0.34,"#000000",{maxLines:3});
       habitCenterRegions.push({cx,cy,r,goodId:good.id,badId:bad.id});
     }else{
       const habit=good || bad;
-      setHighlight(habit);
       ctx.fillStyle=habitColor(habit);
       ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
-      ctx.shadowBlur=0;
-      ctx.globalAlpha=1;
       ctx.lineWidth=outline;
       ctx.strokeStyle=habit.kind==="bad" ? rgba(state.textColor,0.55) : "rgba(0,0,0,.45)";
       ctx.stroke();
+      drawTextInCircle(habit.name,cx,cy,r*0.70,habit.kind==="bad" ? "#ffffff" : "#000000");
       habitCenterRegions.push({cx,cy,r,habitId:habit.id});
     }
     ctx.restore();
@@ -1514,6 +1548,9 @@
       wrap.appendChild(p); return;
     }
     state.items.forEach((it,index)=>{
+      const timeSummary=normalizeItemIntervals(it)
+        .map(interval=>`${interval.start}–${interval.end}`)
+        .join(" · ");
       const card=document.createElement("div");
       card.className="item-card";
       card.innerHTML=`
@@ -1521,7 +1558,7 @@
           <div class="swatch" style="background:${escapeHtml(it.color)}"></div>
           <div style="min-width:0">
             <div class="item-title">${escapeHtml(it.name || "İsimsiz")}</div>
-            <div class="item-time">${escapeHtml(it.start)}–${escapeHtml(it.end)}</div>
+            <div class="item-time">${escapeHtml(timeSummary)}</div>
           </div>
           <div style="display:flex;gap:6px">
             <button class="btn small" type="button" data-edit="${index}">Düzenle</button>
@@ -1537,8 +1574,12 @@
         if(!it) return;
         $("itemName").value=it.name || "";
         $("itemLabel").value=labelTextFor(it);
-        $("itemStart").value=it.start;
-        $("itemEnd").value=it.end;
+        const intervals=normalizeItemIntervals(it);
+        const first=intervals[0] || {start:"09:00",end:"11:00"};
+        $("itemStart").value=first.start;
+        $("itemEnd").value=first.end;
+        $("itemIntervals").innerHTML="";
+        intervals.slice(1).forEach(interval=>addItemIntervalRow(interval.start,interval.end));
         $("itemColor").value=it.color;
         $("addItem").textContent="Değişiklikleri kaydet";
         $("addItem").dataset.editing=String(index);
@@ -1816,33 +1857,87 @@
     $("itemName").value="";
     $("itemLabel").value="";
     $("itemLabel").dataset.manual="0";
+    $("itemStart").value="09:00";
+    $("itemEnd").value="11:00";
+    $("itemIntervals").innerHTML="";
     $("addItem").textContent="Öğe ekle";
     delete $("addItem").dataset.editing;
     delete $("addItem").dataset.originalName;
   }
 
+  function addMinutesToTime(time,amount){
+    const total=(mins(time)+amount+1440)%1440;
+    return `${String(Math.floor(total/60)).padStart(2,"0")}:${String(total%60).padStart(2,"0")}`;
+  }
+
+  function addItemIntervalRow(start="13:00",end="14:00"){
+    const row=document.createElement("div");
+    row.className="item-interval-row";
+    row.innerHTML=`
+      <div><label>Başlangıç</label><input type="time" data-interval-start aria-label="Ek aralık başlangıcı" value="${escapeHtml(start)}"></div>
+      <div><label>Bitiş</label><input type="time" data-interval-end aria-label="Ek aralık bitişi" value="${escapeHtml(end)}"></div>
+      <button class="btn small danger" type="button" data-remove-interval aria-label="Zaman aralığını sil">Sil</button>`;
+    row.querySelector("[data-remove-interval]").addEventListener("click",()=>row.remove());
+    $("itemIntervals").appendChild(row);
+  }
+
+  function readItemIntervalsFromForm(){
+    const intervals=[{start:$("itemStart").value,end:$("itemEnd").value}];
+    $("itemIntervals").querySelectorAll(".item-interval-row").forEach(row=>{
+      intervals.push({
+        start:row.querySelector("[data-interval-start]").value,
+        end:row.querySelector("[data-interval-end]").value
+      });
+    });
+    return intervals;
+  }
+
+  function comparableItemName(name){
+    return String(name || "")
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/g," ")
+      .toLocaleLowerCase("tr-TR");
+  }
+
+  $("addItemInterval").addEventListener("click",()=>{
+    const rows=$("itemIntervals").querySelectorAll(".item-interval-row");
+    const lastEnd=rows.length
+      ? rows[rows.length-1].querySelector("[data-interval-end]").value
+      : $("itemEnd").value;
+    const start=lastEnd || "13:00";
+    addItemIntervalRow(start,addMinutesToTime(start,60));
+  });
+
   $("addItem").addEventListener("click",()=>{
     const name=$("itemName").value.trim();
     const labelText=$("itemLabel").value.trim() || name;
-    const start=$("itemStart").value;
-    const end=$("itemEnd").value;
+    const intervals=readItemIntervalsFromForm();
     const color=$("itemColor").value;
     if(!name){ $("itemName").focus(); return; }
-    if(!start || !end || mins(start)===mins(end)){
-      alert("Başlangıç ve bitiş saati farklı olmalı.");
+    const editing=$("addItem").dataset.editing;
+    const editingIndex=editing===undefined ? -1 : Number(editing);
+    const duplicateName=state.items.some((item,index)=>
+      index!==editingIndex && comparableItemName(item.name)===comparableItemName(name)
+    );
+    if(duplicateName){
+      alert("Bu isimde bir öğe zaten var. Yeni bir zaman aralığını mevcut öğeyi düzenleyerek ekleyebilirsin.");
       return;
     }
+    if(intervals.some(interval=>!interval.start || !interval.end || mins(interval.start)===mins(interval.end))){
+      alert("Her zaman aralığında başlangıç ve bitiş saati farklı olmalı.");
+      return;
+    }
+    const {start,end}=intervals[0];
 
-    const editing=$("addItem").dataset.editing;
     if(editing!==undefined){
-      const index=Number(editing);
-      const item=state.items[index];
+      const item=state.items[editingIndex];
       if(item){
-        state.items[index]={...item,name,start,end,color};
+        state.items[editingIndex]={...item,name,start,end,intervals,color};
         state.labelTexts[item.id]=labelText;
       }
     }else{
-      const item={id:makeItemId(),name,start,end,color};
+      const item={id:makeItemId(),name,start,end,intervals,color};
       state.items.push(item);
       state.labelTexts[item.id]=labelText;
     }
@@ -2183,7 +2278,7 @@
     });
 
     window.addEventListener("load",()=>{
-      navigator.serviceWorker.register("./sw.js?v=11",{updateViaCache:"none"})
+      navigator.serviceWorker.register("./sw.js?v=12",{updateViaCache:"none"})
         .then(registration=>registration.update())
         .catch(err=>console.warn("SW:",err));
     });
