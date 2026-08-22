@@ -115,10 +115,10 @@
 <div class="auth-overlay" id="authOverlay" hidden>
   <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
     <h2 id="authTitle">Plan Wallpaper</h2>
-    <p>Google ile giriş yaparsan planların cihazların arasında eşitlenir. İstersen hesap açmadan yalnız bu cihazda kullanabilirsin.</p>
+    <p>Google ile giriş yaparsan planların cihazların arasında eşitlenir. Hesapsız kullanımdaki değişiklikler sayfa kapanınca silinir.</p>
     <div class="auth-actions">
       <button class="btn google-btn" id="googleLogin" type="button">Google ile devam et</button>
-      <button class="btn" id="guestLogin" type="button">Hesap olmadan devam et</button>
+      <button class="btn" id="guestLogin" type="button">Kaydetmeden devam et</button>
     </div>
     <div class="auth-message" id="authMessage"></div>
   </div>
@@ -282,10 +282,6 @@
   const $ = id => document.getElementById(id);
   const canvas = $("canvas");
   const ctx = canvas.getContext("2d");
-  const LEGACY_STORAGE_KEY = "plan-wallpaper-v1";
-  const GUEST_STORAGE_KEY = "plan-wallpaper-guest-v2";
-  const AUTH_CHOICE_KEY = "plan-wallpaper-auth-choice-v1";
-  const ACCOUNT_CACHE_PREFIX = "plan-wallpaper-account-v2:";
   const SUPABASE_URL = "https://pbqwhxtmkmxzarvnsesu.supabase.co";
   const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_7yksSVZ_VJgG1yzbe3H-sg_IOg_u0lC";
 
@@ -408,13 +404,6 @@
     };
   }
 
-  function readJsonStorage(key){
-    try{
-      const raw=localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
-    }catch(e){ return null; }
-  }
-
   function normalizeAppData(raw){
     if(raw && typeof raw==="object" && raw.appState){
       return {
@@ -430,14 +419,26 @@
     };
   }
 
-  function loadInitialGuestData(){
-    const current=readJsonStorage(GUEST_STORAGE_KEY);
-    if(current) return normalizeAppData(current);
-    const legacy=readJsonStorage(LEGACY_STORAGE_KEY);
-    return normalizeAppData(legacy || structuredClone(defaultState));
+  function clearObsoleteAppStorage(){
+    const exactKeys=new Set([
+      "plan-wallpaper-v1",
+      "plan-wallpaper-guest-v2",
+      "plan-wallpaper-auth-choice-v1"
+    ]);
+    try{
+      for(let i=localStorage.length-1;i>=0;i--){
+        const key=localStorage.key(i);
+        if(key && (exactKeys.has(key) || key.startsWith("plan-wallpaper-account-v2:"))){
+          localStorage.removeItem(key);
+        }
+      }
+    }catch(e){
+      console.warn("Obsolete local app data could not be cleared:",e);
+    }
   }
 
-  const initialData=loadInitialGuestData();
+  clearObsoleteAppStorage();
+  const initialData=normalizeAppData(structuredClone(defaultState));
   let state=initialData.appState;
   let bgImage=null;
   let bgImageDataUrl=initialData.bgImageDataUrl;
@@ -454,24 +455,7 @@
     };
   }
 
-  function accountCacheKey(userId){
-    return ACCOUNT_CACHE_PREFIX + userId;
-  }
-
-  function saveLocalData(){
-    const key=currentUser ? accountCacheKey(currentUser.id) : GUEST_STORAGE_KEY;
-    try{
-      localStorage.setItem(key,JSON.stringify(currentAppData()));
-      if(!currentUser) localStorage.removeItem(LEGACY_STORAGE_KEY);
-      return true;
-    }catch(e){
-      setAuthStatus(currentUser ? "Yerel önbellek dolu; bulut senkronu sürecek." : "Yerel kayıt alanı dolu.", "err");
-      return false;
-    }
-  }
-
   function saveState(){
-    saveLocalData();
     if(currentUser && authReady && !ignoreCloudSync) queueCloudSync();
   }
 
@@ -503,12 +487,11 @@
     img.src=bgImageDataUrl;
   }
 
-  function applyAppData(raw,{persist=false}={}){
+  function applyAppData(raw){
     const data=normalizeAppData(raw);
     ignoreCloudSync=true;
     state=data.appState;
     bgImageDataUrl=data.bgImageDataUrl;
-    if(persist) saveLocalData();
     syncUI();
     loadBackgroundImage();
     ignoreCloudSync=false;
@@ -540,7 +523,6 @@
         updated_at:new Date().toISOString()
       },{onConflict:"user_id"});
       if(error) throw error;
-      try{ localStorage.setItem(accountCacheKey(currentUser.id),JSON.stringify(payload)); }catch(e){}
       setAuthStatus("Google hesabıyla eşitlendi","ok");
     }catch(err){
       pendingCloudSync=true;
@@ -556,10 +538,11 @@
     authReady=false;
     currentUser=user;
     updateAuthUI();
-    localStorage.setItem(AUTH_CHOICE_KEY,"account");
     setAuthStatus("Bulut verisi yükleniyor…","busy");
 
-    const accountCache=readJsonStorage(accountCacheKey(user.id));
+    // Giriş yapılmışken yerel misafir verisini ekranda tutma: bu kullanıcı
+    // için tek veri kaynağı buluttaki kayıt olmalıdır.
+    applyAppData(structuredClone(defaultState));
     try{
       const {data,error}=await supa
         .from("user_app_state")
@@ -569,48 +552,37 @@
       if(error) throw error;
 
       if(data?.state){
-        applyAppData(data.state,{persist:true});
+        applyAppData(data.state);
       }else{
-        if(accountCache) applyAppData(accountCache,{persist:true});
-        const payload=currentAppData();
-        const {error:insertError}=await supa.from("user_app_state").upsert({
-          user_id:user.id,
-          state:payload,
-          updated_at:new Date().toISOString()
-        },{onConflict:"user_id"});
-        if(insertError) throw insertError;
-        try{ localStorage.setItem(accountCacheKey(user.id),JSON.stringify(payload)); }catch(e){}
+        setAuthStatus("Hesapta kayıtlı plan yok","ok");
       }
       authReady=true;
       pendingCloudSync=false;
       $("authOverlay").hidden=true;
-      setAuthStatus("Google hesabıyla eşitlendi","ok");
+      if(data?.state) setAuthStatus("Google hesabıyla eşitlendi","ok");
     }catch(err){
       console.error("Cloud load failed:",err);
-      if(accountCache) applyAppData(accountCache,{persist:false});
       authReady=false;
       $("authOverlay").hidden=true;
-      setAuthStatus("Buluta bağlanılamadı; yerel önbellek kullanılıyor.","err");
+      setAuthStatus("Bulut verisi yüklenemedi; yerel veri kullanılmadı.","err");
     }
   }
 
-  function activateGuest(){
+  function activateAnonymous({reset=true,status="Hesap açık değil • değişiklikler kaydedilmez",kind="ok"}={}){
+    clearTimeout(cloudSyncTimer);
+    pendingCloudSync=false;
     authReady=false;
     currentUser=null;
     updateAuthUI();
-    localStorage.setItem(AUTH_CHOICE_KEY,"guest");
-    const guest=readJsonStorage(GUEST_STORAGE_KEY);
-    if(guest) applyAppData(guest,{persist:false});
+    if(reset) applyAppData(structuredClone(defaultState));
     $("authOverlay").hidden=true;
-    setAuthStatus("Misafir • yalnız bu cihazda","ok");
+    setAuthStatus(status,kind);
   }
 
   async function initializeAuth(){
     updateAuthUI();
     if(!supa){
-      setAuthStatus("Supabase istemcisi yüklenemedi.","err");
-      if(localStorage.getItem(AUTH_CHOICE_KEY)==="guest") activateGuest();
-      else $("authOverlay").hidden=false;
+      activateAnonymous({status:"Giriş hizmeti yüklenemedi • değişiklikler kaydedilmez",kind:"err"});
       return;
     }
     try{
@@ -618,24 +590,19 @@
       if(error) throw error;
       if(session?.user){
         await activateUser(session.user);
-      }else if(localStorage.getItem(AUTH_CHOICE_KEY)==="guest"){
-        activateGuest();
       }else{
-        setAuthStatus("Giriş seçimi bekleniyor");
-        $("authOverlay").hidden=false;
+        activateAnonymous();
       }
     }catch(err){
       console.error("Auth init failed:",err);
-      setAuthStatus("Oturum kontrolü yapılamadı.","err");
-      if(localStorage.getItem(AUTH_CHOICE_KEY)==="guest") activateGuest();
-      else $("authOverlay").hidden=false;
+      activateAnonymous({status:"Oturum kontrolü yapılamadı • değişiklikler kaydedilmez",kind:"err"});
     }
 
     supa.auth.onAuthStateChange((event,session)=>{
       if(event==="SIGNED_IN" && session?.user && session.user.id!==currentUser?.id){
         setTimeout(()=>activateUser(session.user),0);
       }else if(event==="SIGNED_OUT"){
-        setTimeout(()=>activateGuest(),0);
+        setTimeout(()=>activateAnonymous(),0);
       }
     });
   }
@@ -1004,36 +971,38 @@
   }
 
   function drawTicks(ring,radius,stroke,cx,cy,minA,rd,isInner=false){
-    const step=180;
-    const moments=tickMoments(ring,rd,step);
+    const moments=tickMoments(ring,rd,60);
     const clearGap=Math.max(5,stroke*0.22);
     const tickLen=Math.max(6,stroke*0.34);
+    const minorTickLen=Math.max(4,tickLen*0.58);
     const labelGap=Math.max(8,stroke*0.42);
     const fontSize=Math.max(8,Math.min(24,minA*0.017));
     const bandEdge=isInner ? radius-stroke/2 : radius+stroke/2;
 
     ctx.lineWidth=Math.max(1,minA*0.0013);
-    ctx.strokeStyle=rgba(state.textColor,0.52);
     ctx.fillStyle=rgba(state.textColor,0.78);
     ctx.font=`500 ${fontSize}px Inter,system-ui,sans-serif`;
     ctx.textAlign="center";
     ctx.textBaseline="middle";
 
-    moments.forEach((t,idx)=>{
+    moments.forEach(t=>{
+      const isMajor=((t%180)+180)%180<0.001;
+      const currentTickLen=isMajor ? tickLen : minorTickLen;
       const a=clockAngle(t);
       let r1,r2,lr;
       if(isInner){
-        r1=bandEdge-clearGap; r2=r1-tickLen; lr=r2-labelGap-fontSize*0.35;
+        r1=bandEdge-clearGap; r2=r1-currentTickLen; lr=r1-tickLen-labelGap-fontSize*0.35;
       }else{
-        r1=bandEdge+clearGap; r2=r1+tickLen; lr=r2+labelGap+fontSize*0.35;
+        r1=bandEdge+clearGap; r2=r1+currentTickLen; lr=r1+tickLen+labelGap+fontSize*0.35;
       }
 
+      ctx.strokeStyle=rgba(state.textColor,isMajor?0.52:0.32);
       ctx.beginPath();
       ctx.moveTo(cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);
       ctx.lineTo(cx+Math.cos(a)*r2,cy+Math.sin(a)*r2);
       ctx.stroke();
 
-      if(lr>fontSize){
+      if(isMajor && lr>fontSize){
         ctx.fillText(clock(t,"24"),cx+Math.cos(a)*lr,cy+Math.sin(a)*lr);
       }
     });
@@ -1519,26 +1488,27 @@
     }
 
     {
-      const step=180;
+      const step=60;
       const first=Math.ceil(rs/step)*step;
       const end=rs+rd;
       const fontSize=Math.max(8,Math.min(24,minA*0.017));
       const clearGap=Math.max(5,stroke*0.22);
       const tickLen=Math.max(6,stroke*0.34);
+      const minorTickLen=Math.max(4,tickLen*0.58);
       const labelGap=Math.max(8,stroke*0.42);
 
       ctx.lineWidth=Math.max(1,minA*0.0013);
-      ctx.strokeStyle=rgba(state.textColor,0.52);
       ctx.fillStyle=rgba(state.textColor,0.78);
       ctx.font=`500 ${fontSize}px Inter,system-ui,sans-serif`;
       ctx.textAlign="center";
       ctx.textBaseline="middle";
 
-      let idx=0;
       let lastShownAngle=null;
-      for(let t=first;t<=end+0.001;t+=step,idx++){
+      for(let t=first;t<=end+0.001;t+=step){
         const elapsed=t-rs;
         const p=pointForElapsed(elapsed);
+        const isMajor=((t%180)+180)%180<0.001;
+        const currentTickLen=isMajor ? tickLen : minorTickLen;
 
         // Aynı saatin daha dıştaki turda karşılığı varsa,
         // iç turdaki saat çizgisi ve yazısını hiç gösterme.
@@ -1554,15 +1524,16 @@
         lastShownAngle=normalizedAngle;
 
         const r1=p.r+stroke/2+clearGap;
-        const r2=r1+tickLen;
-        const lr=r2+labelGap+fontSize*0.35;
+        const r2=r1+currentTickLen;
+        const lr=r1+tickLen+labelGap+fontSize*0.35;
 
+        ctx.strokeStyle=rgba(state.textColor,isMajor?0.52:0.32);
         ctx.beginPath();
         ctx.moveTo(cx+Math.cos(p.a)*r1,cy+Math.sin(p.a)*r1);
         ctx.lineTo(cx+Math.cos(p.a)*r2,cy+Math.sin(p.a)*r2);
         ctx.stroke();
 
-        if(lr>fontSize){
+        if(isMajor && lr>fontSize){
           ctx.fillText(clock(t,"24"),cx+Math.cos(p.a)*lr,cy+Math.sin(p.a)*lr);
         }
       }
@@ -2200,7 +2171,7 @@
       return;
     }
     if(location.protocol==="file:"){
-      $("authMessage").textContent="Google girişi PWA web adresinden çalışır. Şimdilik misafir kullanabilirsin.";
+      $("authMessage").textContent="Google girişi PWA web adresinden çalışır. Şimdilik kaydetmeden kullanabilirsin.";
       return;
     }
     $("googleLogin").disabled=true;
@@ -2219,7 +2190,7 @@
     }
   });
 
-  $("guestLogin").addEventListener("click",()=>activateGuest());
+  $("guestLogin").addEventListener("click",()=>activateAnonymous({reset:false}));
 
   $("accountBtn").addEventListener("click",async()=>{
     if(currentUser){

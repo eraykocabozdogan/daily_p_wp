@@ -18,6 +18,7 @@ Google girişinin çalışması için:
 5. Supabase Auth URL Configuration'da deploy edilen uygulama URL'sini Site URL / Redirect URLs listesine ekle.
 
 Davranış:
-- Misafir verisi yalnız cihazda tutulur.
-- İlk Google girişinde hesapta bulut verisi yoksa mevcut cihazdaki plan hesaba taşınır.
-- Hesapta veri varsa bulut sürümü yüklenir.
+- Oturum yoksa uygulama boş açılır ve yapılan değişiklikler kalıcı olarak kaydedilmez.
+- Google ile giriş yapıldığında yalnız hesaptaki bulut verisi yüklenir.
+- Hesap açıkken yapılan değişiklikler yalnız hesaptaki bulut verisine yazılır.
+- Hesapta kayıtlı veri yoksa boş başlangıç planı gösterilir.
