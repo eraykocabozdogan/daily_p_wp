@@ -1202,7 +1202,7 @@
       const labelSpecs=[];
 
       function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-      function labelKey(name){ return `name:${name}`; }
+      function labelKey(item){ return `item:${item.id}`; }
 
       function elapsedSegments(item){
         const segs=[];
